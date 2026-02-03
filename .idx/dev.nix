@@ -12,10 +12,10 @@
         command = [
           "npm"
           "run"
-          "dev"
+"dev"
           "--"
           "--port"
-          "$PORT"
+          "3001"
           "--hostname"
           "0.0.0.0"
         ];

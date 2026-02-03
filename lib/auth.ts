@@ -1,96 +1,104 @@
-// Demo-only authentication utility
+
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
+import { getDatabase } from "@/lib/mongodb";
+import { ObjectId } from 'mongodb';
+
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+
 export interface JWTPayload {
-  userId: string
-  email: string
-  role: "user" | "admin"
-  plan: "free" | "pro" | "business"
-}
-
-export interface User {
-  _id?: string
-  email: string
-  password?: string
-  name: string
-  role: "user" | "admin"
-  plan: "free" | "pro" | "business"
-  planExpiry?: Date
-  createdAt?: Date
-  updatedAt?: Date
-  avatar?: string
-  username?: string
-  bio?: string
-}
-
-export async function hashPassword(password: string): Promise<string> {
-  return password
-}
-
-export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return password === hashedPassword
+  userId: string;
+  role: "user" | "admin";
 }
 
 export async function createToken(payload: JWTPayload): Promise<string> {
-  return Buffer.from(JSON.stringify(payload)).toString("base64")
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "1d" });
 }
 
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
-    const decoded = Buffer.from(token, "base64").toString("utf-8")
-    return JSON.parse(decoded) as JWTPayload
-  } catch {
-    return null
+    return jwt.verify(token, JWT_SECRET) as JWTPayload;
+  } catch (error) {
+    return null;
   }
 }
 
-export async function setAuthCookie(token: string): Promise<void> {}
+export function setAuthCookie(res: NextResponse, token: string): void {
+  res.cookies.set("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24, // 1 day
+    path: "/",
+  });
+}
 
-export async function removeAuthCookie(): Promise<void> {}
+export function removeAuthCookie(res: NextResponse): void {
+  res.cookies.set("token", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: -1, // Expire immediately
+    path: "/",
+  });
+}
 
-export async function getAuthToken(): Promise<string | null> {
-  return null
+export function getAuthToken(req: NextRequest): string | null {
+  return req.cookies.get("token")?.value || null;
 }
 
 export async function getCurrentUser() {
-  if (typeof window !== "undefined") {
-    const stored = localStorage.getItem("ayush_demo_auth")
-    if (stored) {
-      return JSON.parse(stored)
+    const token = cookies().get("token")?.value;
+  
+    if (!token) {
+      return null;
+    }
+  
+    if (token === "demo-token") {
+      // Demo mode
+      return {
+        _id: new ObjectId(), // Or a fixed demo ID
+        name: "Demo User",
+        email: "demo@example.com",
+        role: "admin",
+        plan: "free",
+      };
+    }
+  
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    } catch (error) {
+      console.error("Invalid token for getCurrentUser", error);
+      return null;
+    }
+  
+    const { userId } = decoded;
+  
+    if (!userId) {
+      return null;
+    }
+  
+    const db = await getDatabase();
+    if (!db) {
+        return null; // Database not available
+    }
+
+    const usersCollection = db.collection("users");
+  
+    try {
+        const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    
+        if (!user) {
+          return null;
+        }
+    
+        // Exclude password before returning
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+
+    } catch (error) {
+        console.error("Error fetching user by ID:", error);
+        return null;
     }
   }
-  return null
-}
-
-export async function requireAuth() {
-  const user = await getCurrentUser()
-  if (!user) {
-    throw new Error("Unauthorized")
-  }
-  return user
-}
-
-export async function requireAdmin() {
-  const user = await requireAuth()
-  if (user.role !== "admin") {
-    throw new Error("Forbidden")
-  }
-  return user
-}
-
-export function canAccessFeature(
-  user: User,
-  feature: "unlimited_links" | "custom_domain" | "api_access" | "remove_branding" | "advanced_analytics"
-): boolean {
-  const planFeatures = {
-    free: [],
-    pro: ["unlimited_links", "remove_branding", "advanced_analytics"],
-    business: ["unlimited_links", "custom_domain", "api_access", "remove_branding", "advanced_analytics"],
-  }
-
-  return planFeatures[user.plan].includes(feature)
-}
-
-export function isPlanExpired(user: User): boolean {
-  if (user.plan === "free") return false
-  if (!user.planExpiry) return true
-  return new Date() > new Date(user.planExpiry)
-}
+  

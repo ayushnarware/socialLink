@@ -11,15 +11,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Check, Crown, CreditCard, Banknote } from "lucide-react"
+import { Check, Crown, Banknote } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
-import { Checkout } from "@/components/checkout"
 import { SUBSCRIPTION_PLANS, formatPrice, formatPriceINR } from "@/lib/products"
 
 export default function BillingPage() {
   const { user } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "razorpay">("stripe")
+  const [paymentMethod, setPaymentMethod] = useState<"razorpay">("razorpay")
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month")
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
 
@@ -279,26 +278,6 @@ export default function BillingPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <button
               type="button"
-              onClick={() => setPaymentMethod("stripe")}
-              className={`flex items-center gap-4 rounded-xl border-2 p-4 transition-all ${
-                paymentMethod === "stripe"
-                  ? "border-accent bg-accent/5"
-                  : "border-border hover:border-muted-foreground"
-              }`}
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#635BFF]/10">
-                <CreditCard className="h-6 w-6 text-[#635BFF]" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-foreground">Stripe</p>
-                <p className="text-sm text-muted-foreground">
-                  Credit/Debit Cards, Apple Pay, Google Pay
-                </p>
-              </div>
-            </button>
-
-            <button
-              type="button"
               onClick={() => setPaymentMethod("razorpay")}
               className={`flex items-center gap-4 rounded-xl border-2 p-4 transition-all ${
                 paymentMethod === "razorpay"
@@ -326,9 +305,6 @@ export default function BillingPage() {
           <DialogHeader>
             <DialogTitle>Complete Your Purchase</DialogTitle>
           </DialogHeader>
-          {selectedPlan && paymentMethod === "stripe" && (
-            <Checkout productId={selectedPlan} />
-          )}
           {selectedPlan && paymentMethod === "razorpay" && (
             <div className="py-8 text-center">
               <p className="text-muted-foreground">

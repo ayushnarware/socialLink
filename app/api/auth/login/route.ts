@@ -1,35 +1,89 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server";
+import { getDatabase } from "@/lib/mongodb";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { email, password } = await request.json();
 
     // Validation
     if (!email || !password) {
       return NextResponse.json(
         { error: "Email and password are required" },
         { status: 400 }
-      )
+      );
     }
 
-    // Demo mode - always accept login
-    return NextResponse.json({
+    const db = await getDatabase();
+
+    if (!db) {
+      // Demo mode
+      const response = NextResponse.json({
+        success: true,
+        message: "Login successful (Demo Mode)",
+        user: { name: "Demo User", email, role: "admin", plan: "free" },
+      });
+
+      response.cookies.set("token", "demo-token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24, // 1 day
+        path: "/",
+      });
+
+      return response;
+    }
+
+    const usersCollection = db.collection("users");
+
+    // Find user by email
+    const user = await usersCollection.findOne({ email });
+
+    if (!user) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    // Compare passwords
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "1d" } // Token expires in 1 day
+    );
+
+    // Prepare user data to return (excluding password)
+    const { password: _, ...userWithoutPassword } = user;
+
+    const response = NextResponse.json({
       success: true,
-      demo: true,
-      message: "Running in demo mode. Connect MongoDB to your account for production features.",
-      user: {
-        id: "demo-user-" + Date.now(),
-        email: email,
-        name: email.split("@")[0],
-        role: "user",
-        plan: "pro",
-      },
-    })
+      message: "Login successful",
+      user: userWithoutPassword,
+    });
+
+    // Set token in an HTTP-only cookie
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24, // 1 day
+      path: "/",
+    });
+
+    return response;
+
   } catch (error) {
-    console.error("Login error:", error)
+    console.error("Login error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
-    )
+    );
   }
 }
