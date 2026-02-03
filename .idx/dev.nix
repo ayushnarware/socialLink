@@ -2,6 +2,7 @@
   channel = "stable-24.05";
   packages = [
     pkgs.nodejs_20
+    pkgs.mongodb
   ];
   idx.extensions = [
     
@@ -12,7 +13,7 @@
         command = [
           "npm"
           "run"
-"dev"
+          "dev"
           "--"
           "--port"
           "3001"
@@ -21,6 +22,13 @@
         ];
         manager = "web";
       };
+      database = {
+        command = [
+            "sh"
+            "-c"
+            "mkdir -p .data/db && mongod --dbpath .data/db"
+        ];
+       };
     };
   };
 }

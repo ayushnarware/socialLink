@@ -12,7 +12,7 @@ This guide helps you set up Google and Facebook OAuth authentication for the Ayu
 4. Click "Create Credentials" > "OAuth 2.0 Client ID"
 5. Select "Web application"
 6. Add authorized redirect URIs:
-   - `http://localhost:3001/api/auth/google/callback` (local development)
+   - `http://localhost:3002/api/auth/google/callback` (local development)
    - `https://your-domain.com/api/auth/google/callback` (production)
 7. Copy the Client ID and Client Secret
 
@@ -22,7 +22,7 @@ Add to your `.env.local` or Vercel environment variables:
 ```
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_client_id_here
 GOOGLE_CLIENT_SECRET=your_client_secret_here
-NEXT_PUBLIC_APP_URL=http://localhost:3001
+NEXT_PUBLIC_APP_URL=http://localhost:3002
 ```
 
 ## Facebook OAuth Setup
@@ -39,7 +39,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3001
 3. Add Product "Facebook Login"
 4. Go to Facebook Login > Settings
 5. Add Valid OAuth Redirect URIs:
-   - `http://localhost:3001/api/auth/facebook/callback` (local)
+   - `http://localhost:3002/api/auth/facebook/callback` (local)
    - `https://your-domain.com/api/auth/facebook/callback` (production)
 
 ### Step 3: Add Environment Variables
@@ -48,7 +48,7 @@ Add to your `.env.local` or Vercel environment variables:
 ```
 NEXT_PUBLIC_FACEBOOK_APP_ID=your_app_id_here
 FACEBOOK_APP_SECRET=your_app_secret_here
-NEXT_PUBLIC_APP_URL=http://localhost:3001
+NEXT_PUBLIC_APP_URL=http://localhost:3002
 ```
 
 ## Testing OAuth Locally
@@ -63,7 +63,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3001
    npm run dev
    ```
 
-3. Go to http://localhost:3001/login or /signup
+3. Go to http://localhost:3002/login or /signup
 
 4. Click "Continue with Google" or "Continue with Facebook"
 
@@ -96,7 +96,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3001
 ### Issue: "Redirect URI mismatch"
 - Ensure the redirect URI in OAuth provider settings exactly matches the URL in code
 - Include the protocol (http:// or https://)
-- For local development, use `http://localhost:3001`
+- For local development, use `http://localhost:3002`
 - For production, use your actual domain
 
 ### Issue: User not logging in

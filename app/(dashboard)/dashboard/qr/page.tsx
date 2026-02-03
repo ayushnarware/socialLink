@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Download, QrCode, Eye, Plus, Trash2, Copy, Check } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "@/hooks/use-toast"
+import QRCode from "qrcode"
 
 interface QRCodeItem {
   id: string
@@ -17,54 +18,38 @@ interface QRCodeItem {
   createdAt: string
 }
 
-// Simple QR Code generator using Canvas
-function generateQRCode(text: string, size: number = 200): string {
-  // Using a simple pattern for demo - in production use qrcode library
-  const canvas = document.createElement("canvas")
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext("2d")
-  
-  if (!ctx) return ""
-  
-  // White background
-  ctx.fillStyle = "#ffffff"
-  ctx.fillRect(0, 0, size, size)
-  
-  // Generate a deterministic pattern based on URL
-  const hash = text.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  const moduleSize = Math.floor(size / 25)
-  
-  ctx.fillStyle = "#000000"
-  
-  // Draw finder patterns (corners)
-  const drawFinderPattern = (x: number, y: number) => {
-    // Outer square
-    ctx.fillRect(x * moduleSize, y * moduleSize, 7 * moduleSize, 7 * moduleSize)
-    ctx.fillStyle = "#ffffff"
-    ctx.fillRect((x + 1) * moduleSize, (y + 1) * moduleSize, 5 * moduleSize, 5 * moduleSize)
-    ctx.fillStyle = "#000000"
-    ctx.fillRect((x + 2) * moduleSize, (y + 2) * moduleSize, 3 * moduleSize, 3 * moduleSize)
+async function generateQRCode(text: string, size: number = 200): Promise<string> {
+  try {
+    return await QRCode.toDataURL(text, {
+      width: size,
+      margin: 2,
+      errorCorrectionLevel: 'H',
+      color: {
+        dark: "#000000",
+        light: "#ffffff",
+      },
+    })
+  } catch (err) {
+    console.error(err)
+    return ""
   }
-  
-  drawFinderPattern(2, 2)
-  drawFinderPattern(16, 2)
-  drawFinderPattern(2, 16)
-  
-  // Generate data modules based on hash
-  for (let i = 0; i < 25; i++) {
-    for (let j = 0; j < 25; j++) {
-      // Skip finder pattern areas
-      if ((i < 9 && j < 9) || (i < 9 && j > 15) || (i > 15 && j < 9)) continue
-      
-      const shouldFill = ((hash * (i + 1) * (j + 1)) % 3) === 0
-      if (shouldFill) {
-        ctx.fillRect(i * moduleSize, j * moduleSize, moduleSize, moduleSize)
-      }
-    }
+}
+
+async function generateQRSVG(text: string): Promise<string> {
+  try {
+    return await QRCode.toString(text, {
+      type: 'svg',
+      margin: 2,
+      errorCorrectionLevel: 'H',
+      color: {
+        dark: "#000000",
+        light: "#ffffff",
+      },
+    })
+  } catch (err) {
+    console.error(err)
+    return ""
   }
-  
-  return canvas.toDataURL("image/png")
 }
 
 export default function QRCodesPage() {
@@ -73,21 +58,29 @@ export default function QRCodesPage() {
   const [newUrl, setNewUrl] = useState("")
   const [newName, setNewName] = useState("")
   const [mainQrUrl, setMainQrUrl] = useState("")
+  const [previewQrUrl, setPreviewQrUrl] = useState("")
   const [copied, setCopied] = useState(false)
   
   const username = user?.username || user?.name?.toLowerCase().replace(/\s+/g, "") || "user"
-  const profileUrl = `ayush.link/${username}`
+  const profileUrl = `https://ayush.link/${username}`
 
   useEffect(() => {
-    // Load saved QR codes from localStorage
     const saved = localStorage.getItem(`ayush_qrcodes_${username}`)
     if (saved) {
       setQrCodes(JSON.parse(saved))
     }
     
-    // Generate main profile QR
-    setMainQrUrl(generateQRCode(profileUrl))
+    generateQRCode(profileUrl).then(setMainQrUrl)
   }, [username, profileUrl])
+
+  useEffect(() => {
+    if (newUrl) {
+      const urlToEncode = newUrl.startsWith("http") ? newUrl : `https://${newUrl}`
+      generateQRCode(urlToEncode).then(setPreviewQrUrl)
+    } else {
+      setPreviewQrUrl("")
+    }
+  }, [newUrl])
 
   const saveQrCodes = (codes: QRCodeItem[]) => {
     localStorage.setItem(`ayush_qrcodes_${username}`, JSON.stringify(codes))
@@ -100,10 +93,12 @@ export default function QRCodesPage() {
       return
     }
     
+    const url = newUrl.startsWith("http") ? newUrl : `https://${newUrl}`
+    
     const newQr: QRCodeItem = {
       id: Date.now().toString(),
-      name: newName || new URL(newUrl.startsWith("http") ? newUrl : `https://${newUrl}`).hostname,
-      url: newUrl.startsWith("http") ? newUrl : `https://${newUrl}`,
+      name: newName || new URL(url).hostname,
+      url: url,
       scans: 0,
       createdAt: new Date().toISOString(),
     }
@@ -119,12 +114,22 @@ export default function QRCodesPage() {
     toast({ title: "Deleted", description: "QR code removed" })
   }
 
-  const handleDownload = (url: string, name: string, format: "png" | "svg") => {
-    const qrDataUrl = generateQRCode(url, 400)
-    const link = document.createElement("a")
-    link.download = `${name}-qr.${format}`
-    link.href = qrDataUrl
-    link.click()
+  const handleDownload = async (url: string, name: string, format: "png" | "svg") => {
+    if (format === 'png') {
+      const qrDataUrl = await generateQRCode(url, 400)
+      const link = document.createElement("a")
+      link.download = `${name}-qr.png`
+      link.href = qrDataUrl
+      link.click()
+    } else {
+      const svgString = await generateQRSVG(url)
+      const blob = new Blob([svgString], { type: 'image/svg+xml' })
+      const link = document.createElement("a")
+      link.href = URL.createObjectURL(blob)
+      link.download = `${name}-qr.svg`
+      link.click()
+      URL.revokeObjectURL(link.href)
+    }
     toast({ title: "Downloaded", description: `QR code saved as ${format.toUpperCase()}` })
   }
 
@@ -135,7 +140,6 @@ export default function QRCodesPage() {
     toast({ title: "Copied", description: "Link copied to clipboard" })
   }
 
-  // Calculate total scans
   const totalScans = qrCodes.reduce((sum, qr) => sum + qr.scans, 0)
 
   return (
@@ -149,7 +153,6 @@ export default function QRCodesPage() {
         </div>
       </div>
 
-      {/* Main Profile QR Code */}
       <Card>
         <CardHeader>
           <CardTitle>Your Profile QR Code</CardTitle>
@@ -160,8 +163,10 @@ export default function QRCodesPage() {
         <CardContent>
           <div className="flex flex-col items-center gap-6 sm:flex-row">
             <div className="flex h-48 w-48 items-center justify-center rounded-xl border border-border bg-white p-2">
-              {mainQrUrl && (
-                <img src={mainQrUrl || "/placeholder.svg"} alt="Profile QR Code" className="h-full w-full" />
+              {mainQrUrl ? (
+                <img src={mainQrUrl} alt="Profile QR Code" className="h-full w-full" />
+              ) : (
+                <div className="h-full w-full bg-gray-200 animate-pulse rounded-md" />
               )}
             </div>
             <div className="flex-1 space-y-4">
@@ -197,7 +202,6 @@ export default function QRCodesPage() {
         </CardContent>
       </Card>
 
-      {/* Generate New QR Code */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -236,17 +240,16 @@ export default function QRCodesPage() {
             </div>
           </div>
           
-          {newUrl && (
+          {previewQrUrl && (
             <div className="mt-6 flex justify-center">
               <div className="rounded-xl border border-border bg-white p-4">
-                <img src={generateQRCode(newUrl.startsWith("http") ? newUrl : `https://${newUrl}`)} alt="QR Preview" className="h-40 w-40" />
+                <img src={previewQrUrl} alt="QR Preview" className="h-40 w-40" />
               </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* All QR Codes */}
       <Card>
         <CardHeader>
           <CardTitle>Your QR Codes</CardTitle>
@@ -267,38 +270,64 @@ export default function QRCodesPage() {
           ) : (
             <div className="space-y-4">
               {qrCodes.map((qr) => (
-                <div
+                <QrCodeListItem
                   key={qr.id}
-                  className="flex items-center gap-4 rounded-lg border border-border bg-secondary/30 p-4"
-                >
-                  <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-border bg-white p-1">
-                    <img src={generateQRCode(qr.url, 60) || "/placeholder.svg"} alt={qr.name} className="h-full w-full" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground truncate">{qr.name}</p>
-                    <p className="text-sm text-muted-foreground truncate">{qr.url}</p>
-                  </div>
-                  <div className="text-right hidden sm:block">
-                    <p className="text-lg font-semibold text-foreground">{qr.scans}</p>
-                    <p className="text-xs text-muted-foreground">scans</p>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleCopy(qr.url)}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDownload(qr.url, qr.name, "png")}>
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(qr.id)} className="text-destructive hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                  qr={qr}
+                  onDelete={handleDelete}
+                  onDownload={handleDownload}
+                  onCopy={handleCopy}
+                />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+interface QrCodeListItemProps {
+  qr: QRCodeItem;
+  onDelete: (id: string) => void;
+  onDownload: (url: string, name: string, format: "png" | "svg") => void;
+  onCopy: (text: string) => void;
+}
+
+function QrCodeListItem({ qr, onDelete, onDownload, onCopy }: QrCodeListItemProps) {
+  const [qrUrl, setQrUrl] = useState("")
+
+  useEffect(() => {
+    generateQRCode(qr.url, 60).then(setQrUrl)
+  }, [qr.url])
+
+  return (
+    <div className="flex items-center gap-4 rounded-lg border border-border bg-secondary/30 p-4">
+      <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-border bg-white p-1">
+        {qrUrl ? (
+          <img src={qrUrl} alt={qr.name} className="h-full w-full" />
+        ) : (
+          <div className="h-full w-full bg-gray-200 animate-pulse rounded-sm" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-foreground truncate">{qr.name}</p>
+        <p className="text-sm text-muted-foreground truncate">{qr.url}</p>
+      </div>
+      <div className="text-right hidden sm:block">
+        <p className="text-lg font-semibold text-foreground">{qr.scans}</p>
+        <p className="text-xs text-muted-foreground">scans</p>
+      </div>
+      <div className="flex gap-1">
+        <Button variant="ghost" size="icon" onClick={() => onCopy(qr.url)}>
+          <Copy className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onDownload(qr.url, qr.name, "png")}>
+          <Download className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onDelete(qr.id)} className="text-destructive hover:text-destructive">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   )
 }

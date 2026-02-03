@@ -1,11 +1,11 @@
 // OAuth Configuration for Google and Facebook
 export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
 export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || ""
-export const GOOGLE_REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/api/auth/google/callback`
+export const GOOGLE_REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002"}/api/auth/google/callback`
 
 export const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || ""
 export const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET || ""
-export const FACEBOOK_REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/api/auth/facebook/callback`
+export const FACEBOOK_REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002"}/api/auth/facebook/callback`
 
 // OAuth URLs
 export const getGoogleOAuthUrl = () => {

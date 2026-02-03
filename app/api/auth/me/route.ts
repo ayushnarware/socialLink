@@ -24,7 +24,10 @@ export async function GET(request: NextRequest) {
     try {
       decoded = jwt.verify(token, JWT_SECRET);
     } catch (error) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+      // If token is invalid, clear it
+      const response = NextResponse.json({ error: "Invalid token" }, { status: 401 });
+      response.cookies.set("token", "", { maxAge: -1 });
+      return response;
     }
 
     const userId = (decoded as any).userId;
@@ -35,30 +38,34 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase();
     if (!db) {
-        // This should not happen if the demo token is handled above, but as a fallback
-        return NextResponse.json({
-            user: { name: "Demo User", email: "demo@example.com", role: "admin", plan: "free" },
-          });
+        return NextResponse.json(
+            { error: "Database not connected" },
+            { status: 500 }
+        );
     }
     const usersCollection = db.collection("users");
 
-    // Find user by ID
     const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      // If user not found, clear the invalid cookie
+      const response = NextResponse.json({ error: "User not found" }, { status: 404 });
+      response.cookies.set("token", "", { maxAge: -1 });
+      return response;
     }
 
-    // Prepare user data to return (excluding password)
     const { password, ...userWithoutPassword } = user;
 
     return NextResponse.json({ user: userWithoutPassword });
 
   } catch (error) {
     console.error("Get user error:", error);
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
+    // Also clear cookie on internal errors
+    response.cookies.set("token", "", { maxAge: -1 });
+    return response;
   }
 }
