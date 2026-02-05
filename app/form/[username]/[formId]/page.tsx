@@ -52,26 +52,31 @@ export default function PublicFormPage() {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   useEffect(() => {
-    const formsKey = `ayush_forms_${username}`
-    const saved = localStorage.getItem(formsKey)
-    
-    if (!saved) {
+    if (!username || !formId) {
       setNotFound(true)
       setLoading(false)
       return
     }
-
-    const forms: Form[] = JSON.parse(saved)
-    const foundForm = forms.find(f => f.id === formId)
-    
-    if (!foundForm) {
-      setNotFound(true)
-      setLoading(false)
-      return
-    }
-
-    setForm(foundForm)
-    setLoading(false)
+    fetch(`/api/share/form?username=${encodeURIComponent(username)}&formId=${encodeURIComponent(formId)}`)
+      .then((res) => {
+        if (!res.ok) {
+          setNotFound(true)
+          return null
+        }
+        return res.json()
+      })
+      .then((data) => {
+        if (data?.form) {
+          setForm({ ...data.form, createdAt: "", responses: [] })
+          fetch("/api/analytics/track", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, type: "formView", formId }),
+          }).catch(() => {})
+        }
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false))
   }, [username, formId])
 
   const handleInputChange = (fieldId: string, value: string) => {
@@ -107,7 +112,7 @@ export default function PublicFormPage() {
     setFormData(prev => ({ ...prev, [fieldId]: updated.join(", ") }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form) return
 
@@ -121,30 +126,14 @@ export default function PublicFormPage() {
 
     setSubmitting(true)
 
-    // Save response
-    const response: FormResponse = {
-      id: Date.now().toString(),
-      formId: form.id,
-      data: formData,
-      submittedAt: new Date().toISOString(),
-    }
+    const res = await fetch("/api/forms/responses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ formId: form.id, responseData: formData }),
+    })
 
-    const formsKey = `ayush_forms_${username}`
-    const saved = localStorage.getItem(formsKey)
-    if (saved) {
-      const forms: Form[] = JSON.parse(saved)
-      const updatedForms = forms.map(f => 
-        f.id === form.id 
-          ? { ...f, responses: [...f.responses, response] }
-          : f
-      )
-      localStorage.setItem(formsKey, JSON.stringify(updatedForms))
-    }
-
-    setTimeout(() => {
-      setSubmitting(false)
-      setSubmitted(true)
-    }, 500)
+    setSubmitting(false)
+    if (res.ok) setSubmitted(true)
   }
 
   if (loading) {

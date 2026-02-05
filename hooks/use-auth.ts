@@ -7,11 +7,13 @@ export interface AuthUser {
   _id: string;
   email: string;
   name: string;
-  role: "user" | "admin";
+  role: "user" | "admin" | "super-admin";
   plan: "free" | "pro" | "business";
   avatar?: string;
   username?: string;
   bio?: string;
+  websiteUrl?: string;
+  socials?: Array<{ platform: string; url: string }>;
   createdAt: string;
 }
 

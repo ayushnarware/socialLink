@@ -9,7 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 export interface JWTPayload {
   userId: string;
-  role: "user" | "admin";
+  role: "user" | "admin" | "super-admin";
 }
 
 export async function createToken(payload: JWTPayload): Promise<string> {
@@ -47,21 +47,13 @@ export function getAuthToken(req: NextRequest): string | null {
 }
 
 export async function getCurrentUser() {
-    const token = cookies().get("token")?.value;
+
+  const cookieStore = await cookies(); 
+  const token = cookieStore.get("token")?.value;
+    // const token = cookies().get("token")?.value;
   
     if (!token) {
       return null;
-    }
-  
-    if (token === "demo-token") {
-      // Demo mode
-      return {
-        _id: new ObjectId(), // Or a fixed demo ID
-        name: "Demo User",
-        email: "demo@example.com",
-        role: "admin",
-        plan: "free",
-      };
     }
   
     let decoded;

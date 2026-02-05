@@ -1,9 +1,8 @@
 "use client"
 
-import React from "react"
-
-import { useState } from "react"
+import React, { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,24 +12,32 @@ import { SocialLoginButtons } from "@/components/auth/social-login-buttons"
 import { AuthDivider } from "@/components/auth/divider"
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { login, isAuthenticated, isLoading } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push("/dashboard")
+    }
+  }, [isLoading, isAuthenticated, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    setIsLoading(true)
+    setIsSubmitting(true)
 
     try {
       await login(email, password)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
     } finally {
-      setIsLoading(false)
+      setIsSubmitting(false)
     }
   }
 
@@ -113,9 +120,9 @@ export default function LoginPage() {
           <Button
             type="submit"
             className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
-            disabled={isLoading}
+            disabled={isSubmitting}
           >
-            {isLoading ? (
+            {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...
@@ -130,7 +137,7 @@ export default function LoginPage() {
         <AuthDivider />
 
         {/* Social Login */}
-        <SocialLoginButtons isLoading={isLoading} />
+        <SocialLoginButtons isLoading={isSubmitting} />
 
         {/* Sign up link */}
         <p className="text-center text-sm text-muted-foreground">

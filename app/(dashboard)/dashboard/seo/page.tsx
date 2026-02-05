@@ -5,9 +5,15 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/hooks/use-auth"
+import { toast } from "@/hooks/use-toast"
+import { Loader2 } from "lucide-react"
 
 export default function SEOPage() {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [seoData, setSeoData] = useState({
     title: "",
     description: "",
@@ -15,6 +21,54 @@ export default function SEOPage() {
     ogImage: "",
     canonicalUrl: "",
   })
+
+  useEffect(() => {
+    if (!user?._id) return
+    fetch("/api/page-settings")
+      .then((res) => res.json())
+      .then((data) => {
+        setSeoData({
+          title: data.seoTitle || "",
+          description: data.seoDescription || "",
+          keywords: data.seoKeywords || "",
+          ogImage: data.ogImage || "",
+          canonicalUrl: data.canonicalUrl || "",
+        })
+      })
+      .catch(() => toast({ title: "Error", description: "Failed to load SEO settings", variant: "destructive" }))
+      .finally(() => setLoading(false))
+  }, [user?._id])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch("/api/page-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seoTitle: seoData.title,
+          seoDescription: seoData.description,
+          seoKeywords: seoData.keywords,
+          ogImage: seoData.ogImage,
+          canonicalUrl: seoData.canonicalUrl,
+        }),
+      })
+      if (!res.ok) throw new Error("Failed to save")
+      toast({ title: "Success", description: "SEO settings saved! Your page meta will update." })
+    } catch {
+      toast({ title: "Error", description: "Failed to save SEO settings", variant: "destructive" })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -26,7 +80,6 @@ export default function SEOPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Meta Tags */}
         <Card>
           <CardHeader>
             <CardTitle>Meta Tags</CardTitle>
@@ -46,7 +99,7 @@ export default function SEOPage() {
                 }
               />
               <p className="text-xs text-muted-foreground">
-                {seoData.title.length}/60 characters recommended
+                {seoData.title.length}/60 characters (recommended for Google)
               </p>
             </div>
 
@@ -62,7 +115,7 @@ export default function SEOPage() {
                 }
               />
               <p className="text-xs text-muted-foreground">
-                {seoData.description.length}/160 characters recommended
+                {seoData.description.length}/160 characters (recommended)
               </p>
             </div>
 
@@ -83,7 +136,6 @@ export default function SEOPage() {
           </CardContent>
         </Card>
 
-        {/* Open Graph */}
         <Card>
           <CardHeader>
             <CardTitle>Open Graph</CardTitle>
@@ -107,7 +159,6 @@ export default function SEOPage() {
               </p>
             </div>
 
-            {/* Preview */}
             <div className="rounded-lg border border-border bg-secondary/50 p-4">
               <p className="mb-2 text-xs font-medium text-muted-foreground">
                 Social Preview
@@ -117,7 +168,7 @@ export default function SEOPage() {
                   {seoData.ogImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={seoData.ogImage || "/placeholder.svg"}
+                      src={seoData.ogImage}
                       alt="OG Preview"
                       className="h-full w-full object-cover"
                     />
@@ -141,7 +192,6 @@ export default function SEOPage() {
           </CardContent>
         </Card>
 
-        {/* Advanced */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Advanced Settings</CardTitle>
@@ -152,7 +202,7 @@ export default function SEOPage() {
               <Label htmlFor="canonical">Canonical URL</Label>
               <Input
                 id="canonical"
-                placeholder="https://example.com/your-page"
+                placeholder="https://ayush.link/your-username"
                 value={seoData.canonicalUrl}
                 onChange={(e) =>
                   setSeoData((prev) => ({ ...prev, canonicalUrl: e.target.value }))
@@ -179,8 +229,19 @@ export default function SEOPage() {
       </div>
 
       <div className="flex justify-end">
-        <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-          Save Changes
+        <Button
+          className="bg-accent text-accent-foreground hover:bg-accent/90"
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
         </Button>
       </div>
     </div>

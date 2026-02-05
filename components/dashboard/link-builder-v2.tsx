@@ -41,6 +41,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { toast } from "@/hooks/use-toast"
 
 interface LinkItem {
   id: string
@@ -86,58 +87,92 @@ export function LinkBuilderV2() {
     cryptoType: "BTC",
   })
 
-  // Load links from localStorage on mount
   useEffect(() => {
-    if (!user?.id) return
-    const storageKey = `ayush_links_${user.id}`
-    const stored = localStorage.getItem(storageKey)
-    if (stored) {
-      try {
-        setLinks(JSON.parse(stored))
-      } catch (e) {
-        console.error("[v0] Failed to parse links from localStorage:", e)
-      }
-    }
-  }, [user?.id])
-
-  // Save links to localStorage whenever they change
-  useEffect(() => {
-    if (!user?.id) return
-    const storageKey = `ayush_links_${user.id}`
-    if (links.length >= 0) {
-      localStorage.setItem(storageKey, JSON.stringify(links))
-    }
-  }, [links, user?.id])
+    if (!user?._id) return
+    fetch("/api/links")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.links) {
+          setLinks(data.links.map((l: { id: string; title: string; url: string; type: string; visible: boolean; spotlight?: boolean; clicks: number; videoUrl?: string; musicUrl?: string; images?: string[]; cryptoAddress?: string; cryptoType?: string }) => ({
+            id: l.id,
+            title: l.title,
+            url: l.url,
+            type: l.type || "link",
+            visible: l.visible,
+            spotlight: l.spotlight,
+            clicks: l.clicks || 0,
+            videoUrl: l.videoUrl,
+            musicUrl: l.musicUrl,
+            images: l.images,
+            cryptoAddress: l.cryptoAddress,
+            cryptoType: l.cryptoType,
+          })))
+        }
+      })
+      .catch(console.error)
+  }, [user?._id])
 
   const toggleVisibility = (id: string) => {
-    setLinks((prev) =>
-      prev.map((link) =>
-        link.id === id ? { ...link, visible: !link.visible } : link
-      )
-    )
+    const link = links.find((l) => l.id === id)
+    if (!link) return
+    const visible = !link.visible
+    setLinks((prev) => prev.map((l) => (l.id === id ? { ...l, visible } : l)))
+    fetch("/api/links", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ linkId: id, visible }) })
+      .then((r) => r.ok && toast({ title: "Success", description: visible ? "Link visible" : "Link hidden" }))
+      .catch(() => toast({ title: "Error", description: "Failed to update", variant: "destructive" }))
   }
 
   const toggleSpotlight = (id: string) => {
+    const link = links.find((l) => l.id === id)
+    if (!link) return
+    const spotlight = !link.spotlight
     setLinks((prev) =>
-      prev.map((link) =>
-        link.id === id
-          ? { ...link, spotlight: !link.spotlight }
-          : { ...link, spotlight: false }
-      )
+      prev.map((l) => (l.id === id ? { ...l, spotlight } : { ...l, spotlight: false }))
     )
+    fetch("/api/links", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ linkId: id, spotlight }) })
+      .then((r) => r.ok && toast({ title: "Success", description: spotlight ? "Link featured" : "Link unfeatured" }))
+      .catch(() => toast({ title: "Error", description: "Failed to update", variant: "destructive" }))
   }
 
   const deleteLink = (id: string) => {
     setLinks((prev) => prev.filter((link) => link.id !== id))
+    fetch(`/api/links?linkId=${id}`, { method: "DELETE" })
+      .then((r) => r.ok && toast({ title: "Success", description: "Link deleted" }))
+      .catch(() => toast({ title: "Error", description: "Failed to delete", variant: "destructive" }))
   }
 
-  const addLink = () => {
-    if (!newLink.title) return
+  const addLink = async () => {
+    const url = newLink.type === "video" ? newLink.videoUrl : newLink.type === "music" ? newLink.musicUrl : newLink.type === "crypto" ? newLink.cryptoAddress : newLink.url
+    if (!newLink.title || !url) {
+      toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" })
+      return
+    }
+
+    const res = await fetch("/api/links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: newLink.title,
+        url: url || "#",
+        type: newLink.type,
+        videoUrl: newLink.type === "video" ? newLink.videoUrl : undefined,
+        musicUrl: newLink.type === "music" ? newLink.musicUrl : undefined,
+        images: newLink.type === "gallery" && newLink.images ? newLink.images.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
+        cryptoAddress: newLink.type === "crypto" ? newLink.cryptoAddress : undefined,
+        cryptoType: newLink.type === "crypto" ? newLink.cryptoType : undefined,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      toast({ title: "Error", description: data.error || "Failed to add link", variant: "destructive" })
+      return
+    }
+    toast({ title: "Success", description: "Link added!" })
 
     const link: LinkItem = {
-      id: Date.now().toString(),
+      id: data.link.id,
       title: newLink.title,
-      url: newLink.url,
+      url: url || newLink.url,
       type: newLink.type,
       visible: true,
       clicks: 0,
@@ -147,14 +182,32 @@ export function LinkBuilderV2() {
       cryptoAddress: newLink.cryptoAddress || undefined,
       cryptoType: newLink.cryptoType || undefined,
     }
-
     setLinks((prev) => [...prev, link])
     resetForm()
     setIsAddDialogOpen(false)
   }
 
-  const updateLink = () => {
+  const updateLink = async () => {
     if (!editingLink) return
+
+    const url = newLink.type === "video" ? newLink.videoUrl : newLink.type === "music" ? newLink.musicUrl : newLink.type === "crypto" ? newLink.cryptoAddress : newLink.url
+    const patchRes = await fetch("/api/links", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        linkId: editingLink.id,
+        title: newLink.title,
+        url: url || newLink.url,
+        type: newLink.type,
+        videoUrl: newLink.type === "video" ? newLink.videoUrl : undefined,
+        musicUrl: newLink.type === "music" ? newLink.musicUrl : undefined,
+        images: newLink.type === "gallery" && newLink.images ? newLink.images.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
+        cryptoAddress: newLink.type === "crypto" ? newLink.cryptoAddress : undefined,
+        cryptoType: newLink.type === "crypto" ? newLink.cryptoType : undefined,
+      }),
+    })
+    if (patchRes.ok) toast({ title: "Success", description: "Link updated!" })
+    else toast({ title: "Error", description: "Failed to update link", variant: "destructive" })
 
     setLinks((prev) =>
       prev.map((link) =>
@@ -380,7 +433,14 @@ export function LinkBuilderV2() {
               <Button
                 onClick={editingLink ? updateLink : addLink}
                 className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
-                disabled={!newLink.title}
+                disabled={
+                  !newLink.title ||
+                  (newLink.type === "link" || newLink.type === "button" ? !newLink.url : false) ||
+                  (newLink.type === "video" ? !newLink.videoUrl : false) ||
+                  (newLink.type === "music" ? !newLink.musicUrl : false) ||
+                  (newLink.type === "gallery" ? !newLink.images?.trim() : false) ||
+                  (newLink.type === "crypto" ? !newLink.cryptoAddress : false)
+                }
               >
                 {editingLink ? "Update Link" : "Add Link"}
               </Button>

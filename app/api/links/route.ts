@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { isMongoDBConfigured, getDatabase } from "@/lib/mongodb"
+import { getDatabase } from "@/lib/mongodb"
 import { getCurrentUser } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
@@ -17,41 +17,6 @@ export interface Link {
   updatedAt: Date
 }
 
-// Demo links for when MongoDB is not configured
-const demoLinks: Omit<Link, "_id" | "userId">[] = [
-  {
-    title: "My Portfolio",
-    url: "https://portfolio.example.com",
-    type: "link",
-    visible: true,
-    spotlight: true,
-    order: 0,
-    clicks: 234,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    title: "Follow me on YouTube",
-    url: "https://youtube.com/@example",
-    type: "link",
-    visible: true,
-    order: 1,
-    clicks: 156,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    title: "Latest Video",
-    url: "https://youtube.com/watch?v=abc123",
-    type: "video",
-    visible: true,
-    order: 2,
-    clicks: 89,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-]
-
 export async function GET() {
   try {
     const user = await getCurrentUser()
@@ -60,25 +25,23 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    if (!isMongoDBConfigured()) {
-      return NextResponse.json({
-        links: demoLinks.map((link, index) => ({
-          ...link,
-          id: `demo-${index}`,
-        })),
-        demo: true,
-      })
+    const db = await getDatabase()
+    if (!db) {
+      return NextResponse.json(
+        { error: "Database not connected. Please ensure MongoDB is running." },
+        { status: 503 }
+      )
     }
 
-    const db = await getDatabase()
+    const userId = (user as { _id: ObjectId })._id.toString()
     const links = await db
       .collection<Link>("links")
-      .find({ userId: user.userId })
+      .find({ userId })
       .sort({ order: 1 })
       .toArray()
 
     return NextResponse.json({
-      links: links.map((link) => ({
+      links: links.map((link: Link & { videoUrl?: string; musicUrl?: string; images?: string[]; cryptoAddress?: string; cryptoType?: string }) => ({
         id: link._id!.toString(),
         title: link.title,
         url: link.url,
@@ -87,10 +50,56 @@ export async function GET() {
         spotlight: link.spotlight,
         order: link.order,
         clicks: link.clicks,
+        videoUrl: link.videoUrl,
+        musicUrl: link.musicUrl,
+        images: link.images,
+        cryptoAddress: link.cryptoAddress,
+        cryptoType: link.cryptoType,
       })),
     })
   } catch (error) {
     console.error("Get links error:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const db = await getDatabase()
+    if (!db) {
+      return NextResponse.json(
+        { error: "Database not connected. Please ensure MongoDB is running." },
+        { status: 503 }
+      )
+    }
+
+    const { searchParams } = new URL(request.url)
+    const linkId = searchParams.get("linkId")
+    if (!linkId) {
+      return NextResponse.json({ error: "Link ID required" }, { status: 400 })
+    }
+
+    const userId = (user as { _id: ObjectId })._id.toString()
+    const result = await db.collection<Link>("links").deleteOne({
+      _id: new ObjectId(linkId),
+      userId,
+    })
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: "Link not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Delete link error:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -106,45 +115,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { title, url, type = "link" } = await request.json()
+    const body = await request.json()
+    const { title, url, type = "link", videoUrl, musicUrl, images, cryptoAddress, cryptoType } = body
 
-    if (!title || !url) {
+    const linkUrl = type === "video" ? videoUrl : type === "music" ? musicUrl : type === "crypto" ? (cryptoAddress || "#") : url
+    if (!title || (!linkUrl && type !== "gallery")) {
       return NextResponse.json(
         { error: "Title and URL are required" },
         { status: 400 }
       )
     }
 
-    if (!isMongoDBConfigured()) {
-      return NextResponse.json({
-        link: {
-          id: `demo-${Date.now()}`,
-          title,
-          url,
-          type,
-          visible: true,
-          spotlight: false,
-          order: 0,
-          clicks: 0,
-        },
-        demo: true,
-      })
+    const db = await getDatabase()
+    if (!db) {
+      return NextResponse.json(
+        { error: "Database not connected. Please ensure MongoDB is running." },
+        { status: 503 }
+      )
     }
 
-    const db = await getDatabase()
-    
-    // Get the highest order number
+    const userId = (user as { _id: ObjectId })._id.toString()
     const lastLink = await db
       .collection<Link>("links")
-      .findOne({ userId: user.userId }, { sort: { order: -1 } })
+      .findOne({ userId }, { sort: { order: -1 } })
     
     const order = lastLink ? lastLink.order + 1 : 0
     const now = new Date()
 
-    const newLink: Link = {
-      userId: user.userId,
+    const newLink: Link & { videoUrl?: string; musicUrl?: string; images?: string[]; cryptoAddress?: string; cryptoType?: string } = {
+      userId,
       title,
-      url,
+      url: linkUrl || (Array.isArray(images) && images[0] ? images[0] : "#"),
       type,
       visible: true,
       spotlight: false,
@@ -153,6 +154,11 @@ export async function POST(request: NextRequest) {
       createdAt: now,
       updatedAt: now,
     }
+    if (videoUrl) newLink.videoUrl = videoUrl
+    if (musicUrl) newLink.musicUrl = musicUrl
+    if (images?.length) newLink.images = Array.isArray(images) ? images : []
+    if (cryptoAddress) newLink.cryptoAddress = cryptoAddress
+    if (cryptoType) newLink.cryptoType = cryptoType
 
     const result = await db.collection<Link>("links").insertOne(newLink)
 
@@ -164,6 +170,59 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Create link error:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const db = await getDatabase()
+    if (!db) {
+      return NextResponse.json(
+        { error: "Database not connected. Please ensure MongoDB is running." },
+        { status: 503 }
+      )
+    }
+
+    const { linkId, ...updates } = await request.json()
+    if (!linkId) {
+      return NextResponse.json({ error: "Link ID required" }, { status: 400 })
+    }
+
+    const userId = (user as { _id: ObjectId })._id.toString()
+    const updateFields: Record<string, unknown> = { updatedAt: new Date() }
+    if (updates.title !== undefined) updateFields.title = updates.title
+    if (updates.url !== undefined) updateFields.url = updates.url
+    if (updates.type !== undefined) updateFields.type = updates.type
+    if (updates.visible !== undefined) updateFields.visible = updates.visible
+    if (updates.spotlight !== undefined) updateFields.spotlight = updates.spotlight
+    if (updates.order !== undefined) updateFields.order = updates.order
+    if (updates.videoUrl !== undefined) updateFields.videoUrl = updates.videoUrl
+    if (updates.musicUrl !== undefined) updateFields.musicUrl = updates.musicUrl
+    if (updates.images !== undefined) updateFields.images = updates.images
+    if (updates.cryptoAddress !== undefined) updateFields.cryptoAddress = updates.cryptoAddress
+    if (updates.cryptoType !== undefined) updateFields.cryptoType = updates.cryptoType
+
+    const result = await db.collection<Link>("links").updateOne(
+      { _id: new ObjectId(linkId), userId },
+      { $set: updateFields }
+    )
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ error: "Link not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Update link error:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

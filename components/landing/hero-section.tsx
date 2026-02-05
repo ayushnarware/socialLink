@@ -4,8 +4,14 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowRight, Play } from "lucide-react"
 import { HeroScene } from "./hero-scene"
+import { useAuth } from "@/hooks/use-auth"
 
 export function HeroSection() {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  const primaryHref = !isLoading && isAuthenticated ? "/dashboard" : "/signup"
+  const primaryLabel = !isLoading && isAuthenticated ? "Go to Dashboard" : "Get Started Free"
+
   return (
     <section className="relative min-h-screen overflow-hidden pt-16">
       <HeroScene />
@@ -32,9 +38,9 @@ export function HeroSection() {
         </p>
         
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
-          <Link href="/signup">
+          <Link href={primaryHref}>
             <Button size="lg" className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90">
-              Get Started Free
+              {primaryLabel}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>

@@ -35,11 +35,13 @@ export default function AdminLayout({
   const router = useRouter()
   const pathname = usePathname()
 
+  const isAdmin = !!user && (user.role === "admin" || user.role === "super-admin")
+
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || user?.role !== "admin")) {
+    if (!isLoading && (!isAuthenticated || !isAdmin)) {
       router.push("/login")
     }
-  }, [isLoading, isAuthenticated, user, router])
+  }, [isLoading, isAuthenticated, isAdmin, router])
 
   if (isLoading) {
     return (
@@ -49,7 +51,7 @@ export default function AdminLayout({
     )
   }
 
-  if (!isAuthenticated || !user || user.role !== "admin") {
+  if (!isAuthenticated || !user || !isAdmin) {
     return null
   }
 

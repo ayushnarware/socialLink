@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
 import { useState } from "react"
+import { useAuth } from "@/hooks/use-auth"
 
 const navLinks = [
   { href: "#features", label: "Features" },
@@ -14,6 +15,9 @@ const navLinks = [
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const { isAuthenticated, isLoading } = useAuth()
+
+  const showAuthButtons = !isLoading && !isAuthenticated
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -39,18 +43,21 @@ export function Navbar() {
             ))}
           </div>
 
-          <div className="hidden items-center gap-4 md:flex">
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Log in
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                Start for Free
-              </Button>
-            </Link>
-          </div>
+          {/* Desktop auth buttons (shown only when logged out) */}
+          {showAuthButtons && (
+            <div className="hidden items-center gap-4 md:flex">
+              <Link href="/login">
+                <Button variant="ghost" size="sm">
+                  Log in
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                  Start for Free
+                </Button>
+              </Link>
+            </div>
+          )}
 
           {/* Mobile menu button */}
           <button
@@ -82,18 +89,21 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <div className="mt-4 flex flex-col gap-2 pt-4">
-              <Link href="/login" onClick={() => setIsOpen(false)}>
-                <Button variant="ghost" className="w-full">
-                  Log in
-                </Button>
-              </Link>
-              <Link href="/signup" onClick={() => setIsOpen(false)}>
-                <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                  Start for Free
-                </Button>
-              </Link>
-            </div>
+            {/* Mobile auth buttons (shown only when logged out) */}
+            {showAuthButtons && (
+              <div className="mt-4 flex flex-col gap-2 pt-4">
+                <Link href="/login" onClick={() => setIsOpen(false)}>
+                  <Button variant="ghost" className="w-full">
+                    Log in
+                  </Button>
+                </Link>
+                <Link href="/signup" onClick={() => setIsOpen(false)}>
+                  <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                    Start for Free
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}

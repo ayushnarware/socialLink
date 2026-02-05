@@ -32,14 +32,9 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase();
 
     if (!db) {
-      // Demo mode
       return NextResponse.json(
-        {
-          success: true,
-          message: "User created successfully (Demo Mode)",
-          userId: "demo-user-id",
-        },
-        { status: 201 } // 201 Created
+        { error: "Database not connected. Please ensure MongoDB is running." },
+        { status: 503 }
       );
     }
 
@@ -58,12 +53,20 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user
+    const baseUsername = name.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "") || "user";
+    let username = baseUsername;
+    let counter = 1;
+    while (await usersCollection.findOne({ username })) {
+      username = `${baseUsername}${counter++}`;
+    }
+
     const newUser = {
       email,
       password: hashedPassword,
       name,
+      username,
       role: "user",
-      plan: "free", 
+      plan: "free",
       createdAt: new Date(),
       updatedAt: new Date(),
     };

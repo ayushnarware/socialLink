@@ -1,57 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { isMongoDBConfigured, getDatabase, User } from "@/lib/mongodb"
-
-// Demo profile data
-const demoProfile = {
-  username: "demo",
-  name: "Demo User",
-  bio: "Content Creator | Developer | Designer | Building cool stuff on the internet",
-  avatar: null,
-  theme: "dark",
-  links: [
-    {
-      id: "1",
-      title: "My Portfolio",
-      url: "https://portfolio.example.com",
-      type: "link",
-      visible: true,
-      spotlight: true,
-    },
-    {
-      id: "2",
-      title: "Follow me on YouTube",
-      url: "https://youtube.com/@example",
-      type: "link",
-      visible: true,
-    },
-    {
-      id: "3",
-      title: "Latest Video - How to Build a SaaS",
-      url: "https://youtube.com/watch?v=abc123",
-      type: "video",
-      visible: true,
-    },
-    {
-      id: "4",
-      title: "My Music on Spotify",
-      url: "https://open.spotify.com",
-      type: "music",
-      visible: true,
-    },
-    {
-      id: "5",
-      title: "Shop My Merch",
-      url: "https://shop.example.com",
-      type: "link",
-      visible: true,
-    },
-  ],
-  socials: [
-    { platform: "twitter", url: "https://twitter.com/example" },
-    { platform: "instagram", url: "https://instagram.com/example" },
-    { platform: "youtube", url: "https://youtube.com/@example" },
-  ],
-}
+import { getDatabase } from "@/lib/mongodb"
 
 export async function GET(
   request: NextRequest,
@@ -60,35 +8,23 @@ export async function GET(
   try {
     const { username } = await params
 
-    if (!isMongoDBConfigured()) {
-      // Return demo profile with customized username
-      return NextResponse.json({
-        profile: {
-          ...demoProfile,
-          username,
-          name: username.charAt(0).toUpperCase() + username.slice(1),
-        },
-        demo: true,
-      })
+    const db = await getDatabase()
+    if (!db) {
+      return NextResponse.json(
+        { error: "Database not connected. Please ensure MongoDB is running." },
+        { status: 503 }
+      )
     }
 
-    const db = await getDatabase()
-
-    // Find user by username
     const user = await db
-      .collection<User>("users")
+      .collection("users")
       .findOne({ username: username.toLowerCase() })
 
     if (!user) {
-      // Return demo profile for non-existent users
-      return NextResponse.json({
-        profile: {
-          ...demoProfile,
-          username,
-          name: username.charAt(0).toUpperCase() + username.slice(1),
-        },
-        demo: true,
-      })
+      return NextResponse.json(
+        { error: "Profile not found" },
+        { status: 404 }
+      )
     }
 
     // Get user's links
@@ -98,27 +34,71 @@ export async function GET(
       .sort({ order: 1 })
       .toArray()
 
-    // Get page settings
     const pageSettings = await db
       .collection("pageSettings")
       .findOne({ userId: user._id!.toString() })
 
+    const files = await db
+      .collection("files")
+      .find({ userId: user._id!.toString() })
+      .sort({ createdAt: -1 })
+      .project({ content: 0 })
+      .limit(50)
+      .toArray()
+
+    const forms = await db
+      .collection("forms")
+      .find({ userId: user._id!.toString() })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .toArray()
+
+    const seo = pageSettings
+      ? {
+          title: pageSettings.seoTitle || "",
+          description: pageSettings.seoDescription || "",
+          keywords: pageSettings.seoKeywords || "",
+          ogImage: pageSettings.ogImage || "",
+          canonicalUrl: pageSettings.canonicalUrl || "",
+        }
+      : {}
+
     return NextResponse.json({
       profile: {
-        username: user.username,
+        username: user.username || user.name?.toLowerCase().replace(/\s+/g, "") || "user",
         name: user.name,
         bio: user.bio || "",
         avatar: user.avatar || null,
+        websiteUrl: user.websiteUrl || "",
+        plan: user.plan || "free",
         theme: pageSettings?.theme || "default",
-        links: links.map((link) => ({
-          id: link._id!.toString(),
+        links: links.map((link: { _id: { toString: () => string }; title: string; url: string; type: string; visible: boolean; spotlight?: boolean; clicks?: number; videoUrl?: string; musicUrl?: string; images?: string[]; cryptoAddress?: string; cryptoType?: string }) => ({
+          id: link._id.toString(),
           title: link.title,
           url: link.url,
           type: link.type,
           visible: link.visible,
           spotlight: link.spotlight,
+          clicks: link.clicks || 0,
+          videoUrl: link.videoUrl,
+          musicUrl: link.musicUrl,
+          images: link.images,
+          cryptoAddress: link.cryptoAddress,
+          cryptoType: link.cryptoType,
         })),
         socials: user.socials || [],
+        files: files.map((f: { _id: { toString: () => string }; name: string; type: string; size?: number; views?: number }) => ({
+          id: f._id.toString(),
+          name: f.name,
+          type: f.type,
+          size: f.size,
+          views: f.views || 0,
+        })),
+        forms: forms.map((f: { _id: { toString: () => string }; title: string }) => ({
+          id: f._id.toString(),
+          title: f.title,
+        })),
+        seo,
       },
     })
   } catch (error) {

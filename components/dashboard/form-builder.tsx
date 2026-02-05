@@ -37,6 +37,7 @@ export interface Form {
   fields: FormField[]
   createdAt: string
   responses: FormResponse[]
+  responseCount?: number
 }
 
 const fieldTypeIcons: Record<string, React.ReactNode> = {
@@ -58,6 +59,8 @@ export function FormBuilderSection() {
   const [isOpen, setIsOpen] = useState(false)
   const [formTitle, setFormTitle] = useState("")
   const [formDescription, setFormDescription] = useState("")
+  const [createFormFields, setCreateFormFields] = useState<FormField[]>([])
+  const [showCreateFieldDialog, setShowCreateFieldDialog] = useState(false)
   const [selectedForm, setSelectedForm] = useState<Form | null>(null)
   const [showFieldDialog, setShowFieldDialog] = useState(false)
   const [showResponsesDialog, setShowResponsesDialog] = useState(false)
@@ -68,59 +71,107 @@ export function FormBuilderSection() {
   const username = user?.username || user?.name?.toLowerCase().replace(/\s+/g, "") || "user"
 
   useEffect(() => {
-    const saved = localStorage.getItem(`ayush_forms_${username}`)
-    if (saved) {
-      setForms(JSON.parse(saved))
-    }
-  }, [username])
+    if (!user?._id) return
+    fetch("/api/forms")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.forms) {
+          setForms(data.forms.map((f: { id: string; title: string; description: string; fields: FormField[]; createdAt: string; responses: number }) => ({
+            id: f.id,
+            title: f.title,
+            description: f.description || "",
+            fields: f.fields || [],
+            createdAt: f.createdAt,
+            responses: [],
+            responseCount: f.responses || 0,
+          })))
+        }
+      })
+      .catch(console.error)
+  }, [user?._id])
 
-  const saveForms = (newForms: Form[]) => {
-    localStorage.setItem(`ayush_forms_${username}`, JSON.stringify(newForms))
-    setForms(newForms)
+  const loadResponses = async (formId: string) => {
+    const res = await fetch(`/api/forms/responses?formId=${formId}`)
+    const data = await res.json()
+    if (data.responses && selectedForm && selectedForm.id === formId) {
+      const mapped = data.responses.map((r: { id: string; formId: string; data: Record<string, string>; timestamp?: string }) => ({
+        id: r.id,
+        formId: r.formId,
+        data: r.data || {},
+        submittedAt: r.timestamp || new Date().toISOString(),
+      }))
+      setSelectedForm({ ...selectedForm, responses: mapped })
+    }
   }
 
-  const createForm = () => {
-    if (!formTitle) {
-      toast({ title: "Error", description: "Form title is required", variant: "destructive" })
+  const addFieldToCreate = () => {
+    if (!newField.label || !newField.type) {
+      toast({ title: "Error", description: "Please fill field label and type", variant: "destructive" })
       return
     }
-
-    const newForm: Form = {
-      id: Date.now().toString(),
-      title: formTitle,
-      description: formDescription,
-      fields: [],
-      createdAt: new Date().toISOString(),
-      responses: [],
-    }
-
-    saveForms([...forms, newForm])
-    setSelectedForm(newForm)
-    setFormTitle("")
-    setFormDescription("")
-    setIsOpen(false)
-    toast({ title: "Success", description: "Form created!" })
-  }
-
-  const addField = () => {
-    if (!selectedForm || !newField.label || !newField.type) {
-      toast({ title: "Error", description: "Please fill all fields", variant: "destructive" })
-      return
-    }
-
     const field: FormField = {
       id: Date.now().toString(),
       label: newField.label,
       type: newField.type as FormField["type"],
       required: newField.required || false,
       placeholder: newField.placeholder,
-      options: ["select", "checkbox"].includes(newField.type as string) 
-        ? optionsText.split("\n").filter(o => o.trim()) 
-        : undefined,
+      options: ["select", "checkbox"].includes(newField.type as string) ? optionsText.split("\n").filter(o => o.trim()) : undefined,
     }
+    setCreateFormFields((prev) => [...prev, field])
+    setNewField({ type: "text", required: false })
+    setOptionsText("")
+    setShowCreateFieldDialog(false)
+    toast({ title: "Added", description: "Field added to form" })
+  }
 
-    const updatedForm = { ...selectedForm, fields: [...selectedForm.fields, field] }
-    saveForms(forms.map(f => f.id === selectedForm.id ? updatedForm : f))
+  const removeFieldFromCreate = (fieldId: string) => {
+    setCreateFormFields((prev) => prev.filter((f) => f.id !== fieldId))
+  }
+
+  const createForm = async () => {
+    if (!formTitle) {
+      toast({ title: "Error", description: "Form title is required", variant: "destructive" })
+      return
+    }
+    const res = await fetch("/api/forms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: formTitle, description: formDescription, fields: createFormFields }),
+    })
+    const data = await res.json()
+    if (!res.ok) return
+    const newForm: Form = { id: data.form.id, title: formTitle, description: formDescription, fields: createFormFields, createdAt: data.form.createdAt, responses: [] }
+    setForms((prev) => [...prev, newForm])
+    setSelectedForm(newForm)
+    setFormTitle("")
+    setFormDescription("")
+    setCreateFormFields([])
+    setIsOpen(false)
+    toast({ title: "Success", description: "Form created!" })
+  }
+
+  const addField = async () => {
+    if (!selectedForm || !newField.label || !newField.type) {
+      toast({ title: "Error", description: "Please fill all fields", variant: "destructive" })
+      return
+    }
+    const field: FormField = {
+      id: Date.now().toString(),
+      label: newField.label,
+      type: newField.type as FormField["type"],
+      required: newField.required || false,
+      placeholder: newField.placeholder,
+      options: ["select", "checkbox"].includes(newField.type as string) ? optionsText.split("\n").filter(o => o.trim()) : undefined,
+    }
+    const updatedFields = [...selectedForm.fields, field]
+    const res = await fetch(`/api/forms/${selectedForm.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: updatedFields }),
+    })
+    if (!res.ok) return
+    const updatedForm = { ...selectedForm, fields: updatedFields }
+    setForms((prev) => prev.map(f => f.id === selectedForm.id ? updatedForm : f))
     setSelectedForm(updatedForm)
     setNewField({ type: "text", required: false })
     setOptionsText("")
@@ -128,21 +179,30 @@ export function FormBuilderSection() {
     toast({ title: "Success", description: "Field added!" })
   }
 
-  const removeField = (fieldId: string) => {
+  const removeField = async (fieldId: string) => {
     if (!selectedForm) return
-    const updatedForm = { ...selectedForm, fields: selectedForm.fields.filter(f => f.id !== fieldId) }
-    saveForms(forms.map(f => f.id === selectedForm.id ? updatedForm : f))
+    const updatedFields = selectedForm.fields.filter(f => f.id !== fieldId)
+    const res = await fetch(`/api/forms/${selectedForm.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: updatedFields }),
+    })
+    if (!res.ok) return
+    const updatedForm = { ...selectedForm, fields: updatedFields }
+    setForms((prev) => prev.map(f => f.id === selectedForm.id ? updatedForm : f))
     setSelectedForm(updatedForm)
   }
 
-  const deleteForm = (id: string) => {
-    saveForms(forms.filter(f => f.id !== id))
+  const deleteForm = async (id: string) => {
+    const res = await fetch(`/api/forms/${id}`, { method: "DELETE" })
+    if (!res.ok) return
+    setForms((prev) => prev.filter(f => f.id !== id))
     if (selectedForm?.id === id) setSelectedForm(null)
     toast({ title: "Deleted", description: "Form removed" })
   }
 
   const getShareUrl = (formId: string) => {
-    return `${window.location.origin}/form/${username}/${formId}`
+    return `${typeof window !== "undefined" ? window.location.origin : ""}/form/${username}/${formId}`
   }
 
   const copyShareLink = (formId: string) => {
@@ -194,7 +254,7 @@ export function FormBuilderSection() {
                 New Form
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Form</DialogTitle>
               </DialogHeader>
@@ -220,11 +280,118 @@ export function FormBuilderSection() {
                     rows={2}
                   />
                 </div>
+
+                {/* Add Form Field - during creation */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Form Fields ({createFormFields.length})</Label>
+                    <Dialog open={showCreateFieldDialog} onOpenChange={setShowCreateFieldDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-1">
+                          <Plus className="h-4 w-4" />
+                          Add Form Field
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Form Field</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="create-field-label">Field Label</Label>
+                            <Input
+                              id="create-field-label"
+                              placeholder="e.g., Your Name"
+                              value={newField.label || ""}
+                              onChange={e => setNewField({ ...newField, label: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="create-field-type">Field Type</Label>
+                            <select
+                              id="create-field-type"
+                              value={newField.type}
+                              onChange={e => setNewField({ ...newField, type: e.target.value as any })}
+                              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                            >
+                              <option value="text">Short Text</option>
+                              <option value="textarea">Long Text</option>
+                              <option value="email">Email</option>
+                              <option value="phone">Phone Number</option>
+                              <option value="number">Number</option>
+                              <option value="date">Date</option>
+                              <option value="select">Dropdown</option>
+                              <option value="checkbox">Checkboxes</option>
+                              <option value="image">Photo Upload</option>
+                              <option value="file">File Upload (PDF, etc.)</option>
+                            </select>
+                          </div>
+                          {["select", "checkbox"].includes(newField.type as string) && (
+                            <div>
+                              <Label>Options (one per line)</Label>
+                              <Textarea
+                                placeholder="Option 1&#10;Option 2"
+                                value={optionsText}
+                                onChange={e => setOptionsText(e.target.value)}
+                                className="mt-1"
+                                rows={3}
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <Label>Placeholder (Optional)</Label>
+                            <Input
+                              placeholder="e.g., Enter your name"
+                              value={newField.placeholder || ""}
+                              onChange={e => setNewField({ ...newField, placeholder: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="create-required"
+                              checked={newField.required || false}
+                              onChange={e => setNewField({ ...newField, required: e.target.checked })}
+                              className="rounded"
+                            />
+                            <Label htmlFor="create-required" className="cursor-pointer">Required</Label>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button onClick={addFieldToCreate} className="flex-1 bg-accent text-accent-foreground">
+                              Add Field
+                            </Button>
+                            <Button onClick={() => setShowCreateFieldDialog(false)} variant="outline" className="flex-1">
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  {createFormFields.length > 0 ? (
+                    <div className="space-y-2 max-h-32 overflow-y-auto rounded-lg border border-border p-2">
+                      {createFormFields.map((field) => (
+                        <div key={field.id} className="flex items-center justify-between rounded bg-secondary/50 px-3 py-2 text-sm">
+                          <span className="font-medium">{field.label}</span>
+                          <span className="text-xs text-muted-foreground">{field.type}</span>
+                          <Button size="sm" variant="ghost" onClick={() => removeFieldFromCreate(field.id)} className="h-6 w-6 p-0 text-destructive">
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground py-2">No fields yet. Add fields to collect data.</p>
+                  )}
+                </div>
+
                 <div className="flex gap-2">
                   <Button onClick={createForm} className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90">
                     Create Form
                   </Button>
-                  <Button onClick={() => setIsOpen(false)} variant="outline" className="flex-1">
+                  <Button onClick={() => { setIsOpen(false); setCreateFormFields([]) }} variant="outline" className="flex-1">
                     Cancel
                   </Button>
                 </div>
@@ -253,7 +420,7 @@ export function FormBuilderSection() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground text-sm">{form.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {form.fields.length} fields • {form.responses.length} responses
+                      {form.fields.length} fields • {form.responseCount ?? form.responses.length} responses
                     </p>
                   </div>
                   <div className="flex gap-1">
@@ -263,7 +430,7 @@ export function FormBuilderSection() {
                     <Button size="sm" variant="ghost" onClick={() => copyShareLink(form.id)} className="h-8 w-8 p-0">
                       {copied === form.id ? <Check className="h-4 w-4 text-green-500" /> : <Share2 className="h-4 w-4" />}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setSelectedForm(form); setShowResponsesDialog(true) }} className="h-8 w-8 p-0">
+                    <Button size="sm" variant="ghost" onClick={() => { setSelectedForm(form); loadResponses(form.id); setShowResponsesDialog(true) }} className="h-8 w-8 p-0">
                       <Eye className="h-4 w-4" />
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => deleteForm(form.id)} className="h-8 w-8 p-0 text-destructive hover:text-destructive">
@@ -398,9 +565,9 @@ export function FormBuilderSection() {
                     <Eye className="h-4 w-4" />
                     Preview
                   </Button>
-                  <Button onClick={() => setShowResponsesDialog(true)} variant="outline" className="flex-1 gap-2">
+                  <Button onClick={() => { loadResponses(selectedForm.id); setShowResponsesDialog(true) }} variant="outline" className="flex-1 gap-2">
                     <FileText className="h-4 w-4" />
-                    Responses ({selectedForm.responses.length})
+                    Responses ({Array.isArray(selectedForm.responses) ? selectedForm.responses.length : 0})
                   </Button>
                 </div>
               </TabsContent>
@@ -413,7 +580,7 @@ export function FormBuilderSection() {
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
-                <span>Form Responses ({selectedForm?.responses.length || 0})</span>
+                <span>Form Responses ({Array.isArray(selectedForm?.responses) ? selectedForm.responses.length : 0})</span>
                 {selectedForm && selectedForm.responses.length > 0 && (
                   <Button size="sm" variant="outline" onClick={() => exportResponses(selectedForm)} className="gap-2">
                     <Download className="h-4 w-4" />

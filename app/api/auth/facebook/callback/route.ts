@@ -20,20 +20,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // In demo mode, create a demo user
-    // In production, exchange code for token and fetch user info from Facebook
-    const demoUser = {
-      id: `facebook-${Date.now()}`,
-      email: `user-${Date.now()}@facebook.com`,
-      name: "Facebook User",
-      avatar: undefined,
-      provider: "facebook",
-    }
-
-    // Store demo user in localStorage via redirect with user data
-    const userData = encodeURIComponent(JSON.stringify(demoUser))
     return NextResponse.redirect(
-      new URL(`/auth/oauth-callback?provider=facebook&user=${userData}`, request.url)
+      new URL("/login?error=oauth_not_configured", request.url)
     )
   } catch (error) {
     console.error("[Facebook OAuth Callback Error]", error)

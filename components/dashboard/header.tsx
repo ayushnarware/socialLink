@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Menu, ExternalLink, LogOut, User, Settings } from "lucide-react"
 import Link from "next/link"
-import { useSidebar } from "./sidebar"
+import { useSidebarContext } from "@/app/(dashboard)/layout"
 
 interface DashboardHeaderProps {
   user: AuthUser
@@ -19,7 +19,7 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ user }: DashboardHeaderProps) {
   const { logout } = useAuth()
-  const sidebar = useSidebar()
+  const sidebar = useSidebarContext()
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-6 backdrop-blur">

@@ -13,13 +13,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    if (token === "demo-token") {
-      // Demo mode
-      return NextResponse.json({
-        user: { name: "Demo User", email: "demo@example.com", role: "admin", plan: "free" },
-      });
-    }
-
     let decoded;
     try {
       decoded = jwt.verify(token, JWT_SECRET);

@@ -27,33 +27,32 @@ export default function SharedFilePage() {
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
-    // Load file from localStorage
-    const filesKey = `ayush_files_${username}`
-    const saved = localStorage.getItem(filesKey)
-    
-    if (!saved) {
+    if (!username || !fileId) {
       setNotFound(true)
       setLoading(false)
       return
     }
 
-    const files: SharedFile[] = JSON.parse(saved)
-    const foundFile = files.find(f => f.id === fileId)
-    
-    if (!foundFile) {
-      setNotFound(true)
-      setLoading(false)
-      return
-    }
-
-    // Increment view count
-    const updatedFiles = files.map(f => 
-      f.id === fileId ? { ...f, views: f.views + 1 } : f
-    )
-    localStorage.setItem(filesKey, JSON.stringify(updatedFiles))
-    
-    setFile({ ...foundFile, views: foundFile.views + 1 })
-    setLoading(false)
+    fetch(`/api/share/file?username=${encodeURIComponent(username)}&fileId=${encodeURIComponent(fileId)}`)
+      .then((res) => {
+        if (!res.ok) {
+          setNotFound(true)
+          return null
+        }
+        return res.json()
+      })
+      .then((data) => {
+        if (data?.file) {
+          setFile(data.file)
+          fetch("/api/analytics/track", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, type: "fileView", fileId }),
+          }).catch(() => {})
+        }
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false))
   }, [username, fileId])
 
   const handleDownload = () => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,83 +26,36 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { Search, MoreVertical, Ban, Trash2, Mail, Shield, Crown } from "lucide-react"
+import { Search, MoreVertical, Ban, Trash2, Mail, Shield, Loader2 } from "lucide-react"
 
 interface User {
   id: string
   name: string
   email: string
   plan: "free" | "pro" | "business"
-  role: "user" | "admin"
+  role: "user" | "admin" | "super-admin"
   status: "active" | "blocked"
   links: number
   views: number
   joined: string
 }
 
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john@example.com",
-    plan: "pro",
-    role: "user",
-    status: "active",
-    links: 15,
-    views: 2340,
-    joined: "Jan 15, 2026",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane@example.com",
-    plan: "free",
-    role: "user",
-    status: "active",
-    links: 5,
-    views: 890,
-    joined: "Jan 20, 2026",
-  },
-  {
-    id: "3",
-    name: "Bob Wilson",
-    email: "bob@example.com",
-    plan: "business",
-    role: "user",
-    status: "blocked",
-    links: 45,
-    views: 12500,
-    joined: "Dec 10, 2025",
-  },
-  {
-    id: "4",
-    name: "Alice Brown",
-    email: "alice@example.com",
-    plan: "pro",
-    role: "admin",
-    status: "active",
-    links: 22,
-    views: 5670,
-    joined: "Nov 5, 2025",
-  },
-  {
-    id: "5",
-    name: "Charlie Davis",
-    email: "charlie@example.com",
-    plan: "free",
-    role: "user",
-    status: "active",
-    links: 3,
-    views: 450,
-    joined: "Jan 28, 2026",
-  },
-]
-
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<User[]>(mockUsers)
+  const [users, setUsers] = useState<User[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetch("/api/admin/users")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.users) setUsers(data.users)
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false))
+  }, [])
 
   const filteredUsers = users.filter(
     (user) =>
@@ -110,30 +63,46 @@ export default function AdminUsersPage() {
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const toggleBlock = (userId: string) => {
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.id === userId
-          ? { ...user, status: user.status === "active" ? "blocked" : "active" }
-          : user
-      )
-    )
+  const refreshUsers = () => {
+    fetch("/api/admin/users")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.users) setUsers(data.users)
+      })
+      .catch(console.error)
   }
 
-  const deleteUser = () => {
-    if (selectedUser) {
+  const toggleBlock = async (userId: string) => {
+    const user = users.find((u) => u.id === userId)
+    if (!user) return
+    const newStatus = user.status === "active" ? "blocked" : "active"
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    })
+    if (res.ok) refreshUsers()
+  }
+
+  const deleteUser = async () => {
+    if (!selectedUser) return
+    const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+      method: "DELETE",
+    })
+    if (res.ok) {
       setUsers((prev) => prev.filter((user) => user.id !== selectedUser.id))
       setSelectedUser(null)
       setIsDeleteDialogOpen(false)
     }
   }
 
-  const makeAdmin = (userId: string) => {
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.id === userId ? { ...user, role: "admin" } : user
-      )
-    )
+  const makeAdmin = async (userId: string) => {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "admin" }),
+    })
+    if (res.ok) refreshUsers()
   }
 
   return (
@@ -203,6 +172,11 @@ export default function AdminUsersPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -250,7 +224,11 @@ export default function AdminUsersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {user.role === "admin" ? (
+                      {user.role === "super-admin" ? (
+                        <Badge className="bg-purple-600 text-white">
+                          Super Admin
+                        </Badge>
+                      ) : user.role === "admin" ? (
                         <Badge className="bg-accent text-accent-foreground">
                           Admin
                         </Badge>
@@ -282,7 +260,7 @@ export default function AdminUsersPage() {
                             <Mail className="mr-2 h-4 w-4" />
                             Send Email
                           </DropdownMenuItem>
-                          {user.role !== "admin" && (
+                          {user.role === "user" && (
                             <DropdownMenuItem onClick={() => makeAdmin(user.id)}>
                               <Shield className="mr-2 h-4 w-4" />
                               Make Admin
@@ -310,6 +288,7 @@ export default function AdminUsersPage() {
               </TableBody>
             </Table>
           </div>
+          )}
         </CardContent>
       </Card>
 

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getDatabase } from "@/lib/mongodb"
+import crypto from "crypto"
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,24 +21,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // In demo mode, generate a mock reset token
-    // In production, you would:
-    // 1. Find user by email
-    // 2. Generate a secure reset token
-    // 3. Save it to database with expiry (24 hours)
-    // 4. Send email with reset link: /reset-password?token=<token>
+    const db = await getDatabase()
+    if (!db) {
+      return NextResponse.json(
+        { error: "Database not connected. Please ensure MongoDB is running." },
+        { status: 503 }
+      )
+    }
 
-    const mockToken = Buffer.from(email + Date.now()).toString("base64")
-    
-    // In production, send email here
-    console.log(`[DEMO] Password reset link: /reset-password?token=${mockToken}`)
+    const user = await db.collection("users").findOne({ email })
+    if (!user) {
+      return NextResponse.json({ success: true, message: "If an account exists, a reset link has been sent." })
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex")
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
+    await db.collection("passwordResetTokens").updateOne(
+      { email },
+      { $set: { token: resetToken, expiresAt } },
+      { upsert: true }
+    )
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+    const resetLink = `${baseUrl}/reset-password?token=${resetToken}`
+
+    console.log(`Password reset link for ${email}: ${resetLink}`)
 
     return NextResponse.json({
       success: true,
-      message: "Password reset email sent (demo mode)",
-      demo: true,
-      // In production, don't return the token - send it via email only
-      token: process.env.NODE_ENV === "development" ? mockToken : undefined,
+      message: "If an account exists, a reset link has been sent.",
     })
   } catch (error) {
     console.error("Forgot password error:", error)

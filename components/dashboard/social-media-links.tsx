@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +26,7 @@ import {
   Github,
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 
 const SOCIAL_PLATFORMS = [
   { id: 'instagram', label: 'Instagram', icon: Instagram, color: '#E4405F' },
@@ -37,24 +38,45 @@ const SOCIAL_PLATFORMS = [
 ]
 
 export function SocialMediaLinksSection() {
+  const { user } = useAuth()
   const [socialLinks, setSocialLinks] = useState<Array<{ id: string; platform: string; url: string }>>([])
   const [isOpen, setIsOpen] = useState(false)
   const [selectedPlatform, setSelectedPlatform] = useState('')
   const [url, setUrl] = useState('')
 
-  const addLink = () => {
+  useEffect(() => {
+    if (user?.socials && Array.isArray(user.socials)) {
+      setSocialLinks(user.socials.map((s: { platform: string; url: string }, i: number) => ({
+        id: String(i),
+        platform: s.platform || '',
+        url: s.url || '',
+      })))
+    }
+  }, [user?.socials])
+
+  const saveSocials = async (links: Array<{ platform: string; url: string }>) => {
+    const res = await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ socials: links }),
+    })
+    if (res.ok) {
+      setSocialLinks(links.map((l, i) => ({ ...l, id: String(i) })))
+      toast({ title: 'Success', description: 'Social links saved!' })
+    } else {
+      toast({ title: 'Error', description: 'Failed to save social links', variant: 'destructive' })
+    }
+  }
+
+  const addLink = async () => {
     if (!selectedPlatform || !url) {
       toast({ title: 'Error', description: 'Please fill all fields', variant: 'destructive' })
       return
     }
 
-    const newLink = {
-      id: Date.now().toString(),
-      platform: selectedPlatform,
-      url,
-    }
-
-    setSocialLinks([...socialLinks, newLink])
+    const newLink = { platform: selectedPlatform, url }
+    const updated = [...socialLinks.map(l => ({ platform: l.platform, url: l.url })), newLink]
+    await saveSocials(updated)
     setUrl('')
     setSelectedPlatform('')
     setIsOpen(false)
@@ -62,7 +84,8 @@ export function SocialMediaLinksSection() {
   }
 
   const removeLink = (id: string) => {
-    setSocialLinks(socialLinks.filter(link => link.id !== id))
+    const updated = socialLinks.filter(link => link.id !== id).map(l => ({ platform: l.platform, url: l.url }))
+    saveSocials(updated)
     toast({ title: 'Success', description: 'Link removed' })
   }
 

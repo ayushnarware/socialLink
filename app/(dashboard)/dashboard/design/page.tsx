@@ -21,32 +21,24 @@ export default function DesignPage() {
   })
   const [isSaving, setIsSaving] = useState(false)
 
-  // Load design settings from user-specific localStorage
   useEffect(() => {
-    if (!user?.id) return
-    const storageKey = `ayush_design_${user.id}`
-    const stored = localStorage.getItem(storageKey)
-    if (stored) {
-      try {
-        const design = JSON.parse(stored)
-        setSelectedThemeId(design.themeId || "midnight")
-        if (design.customColors) {
-          setCustomColors(design.customColors)
-        }
-      } catch (error) {
-        console.error("[v0] Failed to load design settings:", error)
-      }
-    }
-  }, [user?.id])
+    if (!user?._id) return
+    fetch("/api/page-settings")
+      .then((res) => res.json())
+      .then((data) => {
+        setSelectedThemeId(data.themeId || "midnight")
+        if (data.customColors) setCustomColors(data.customColors)
+      })
+      .catch(console.error)
+  }, [user?._id])
 
-  const handleSaveDesign = () => {
-    if (!user?.id) return
+  const handleSaveDesign = async () => {
+    if (!user?._id) return
     setIsSaving(true)
 
     const selectedTheme = THEMES.find((t) => t.id === selectedThemeId)
     if (!selectedTheme) return
 
-    // Check if user can access this theme
     if (selectedTheme.isPremium && !canAccessTheme(selectedTheme, user?.plan || "free")) {
       toast({
         title: "Premium Theme",
@@ -57,21 +49,19 @@ export default function DesignPage() {
       return
     }
 
-    const design = {
-      themeId: selectedThemeId,
-      customColors: customColors.background || customColors.accent ? customColors : undefined,
+    const res = await fetch("/api/page-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        themeId: selectedThemeId,
+        customColors: customColors.background || customColors.accent ? customColors : undefined,
+      }),
+    })
+
+    setIsSaving(false)
+    if (res.ok) {
+      toast({ title: "Design Saved", description: "Your profile design has been updated" })
     }
-
-    const storageKey = `ayush_design_${user.id}`
-    localStorage.setItem(storageKey, JSON.stringify(design))
-
-    setTimeout(() => {
-      setIsSaving(false)
-      toast({
-        title: "Design Saved",
-        description: "Your profile design has been updated",
-      })
-    }, 500)
   }
 
   const userPlan = user?.plan || "free"

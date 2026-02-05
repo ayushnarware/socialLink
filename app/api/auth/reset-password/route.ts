@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getDatabase } from "@/lib/mongodb"
+import bcrypt from "bcryptjs"
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,19 +20,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // In demo mode, always succeed
-    // In production, you would:
-    // 1. Verify token is valid and not expired
-    // 2. Find user associated with token
-    // 3. Hash new password with bcrypt
-    // 4. Update user's password in database
-    // 5. Delete/invalidate the reset token
-    // 6. Send confirmation email (optional)
+    const db = await getDatabase()
+    if (!db) {
+      return NextResponse.json(
+        { error: "Database not connected. Please ensure MongoDB is running." },
+        { status: 503 }
+      )
+    }
+
+    const resetDoc = await db.collection("passwordResetTokens").findOne({ token })
+    if (!resetDoc || !resetDoc.expiresAt || new Date() > resetDoc.expiresAt) {
+      return NextResponse.json({ error: "Invalid or expired reset token" }, { status: 400 })
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+    await db.collection("users").updateOne(
+      { email: resetDoc.email },
+      { $set: { password: hashedPassword, updatedAt: new Date() } }
+    )
+    await db.collection("passwordResetTokens").deleteOne({ token })
 
     return NextResponse.json({
       success: true,
-      message: "Password reset successful (demo mode)",
-      demo: true,
+      message: "Password reset successful.",
     })
   } catch (error) {
     console.error("Reset password error:", error)

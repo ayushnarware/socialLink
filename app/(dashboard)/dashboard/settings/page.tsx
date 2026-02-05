@@ -16,7 +16,7 @@ import { toast } from "@/hooks/use-toast"
 import Image from "next/image"
 
 export default function SettingsPage() {
-  const { user, logout, updateUser } = useAuth()
+  const { user, logout, mutate } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [avatar, setAvatar] = useState<string | null>(null)
@@ -37,28 +37,14 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (user) {
-      // Load from localStorage first, then fall back to user object
-      const savedProfile = localStorage.getItem(`ayush_profile_${user.id}`)
-      if (savedProfile) {
-        const parsed = JSON.parse(savedProfile)
-        setProfile({
-          name: parsed.name || user.name || "",
-          email: user.email || "",
-          username: parsed.username || username,
-          bio: parsed.bio || user.bio || "",
-          websiteUrl: parsed.websiteUrl || "",
-        })
-        setAvatar(parsed.avatar || user.avatar || null)
-      } else {
-        setProfile({
-          name: user.name || "",
-          email: user.email || "",
-          username: username,
-          bio: user.bio || "",
-          websiteUrl: "",
-        })
-        setAvatar(user.avatar || null)
-      }
+      setProfile({
+        name: user.name || "",
+        email: user.email || "",
+        username: user.username || username,
+        bio: user.bio || "",
+        websiteUrl: user.websiteUrl || "",
+      })
+      setAvatar(user.avatar || null)
     }
   }, [user, username])
 
@@ -86,49 +72,46 @@ export default function SettingsPage() {
   }
 
   const handleSave = async () => {
-    if (!user?.id) return
+    if (!user) return
     setIsLoading(true)
-    
+
     try {
-      // Save profile to localStorage with user ID
-      const profileData = {
-        username: profile.username,
-        name: profile.name,
-        bio: profile.bio,
-        avatar: avatar,
-        websiteUrl: profile.websiteUrl || "",
+      if (profile.username !== (user.username || username)) {
+        const checkRes = await fetch(`/api/profile/check-username?username=${encodeURIComponent(profile.username)}`)
+        const checkData = await checkRes.json()
+        if (!checkData.available) {
+          toast({ title: "Username unavailable", description: "This username is already taken", variant: "destructive" })
+          setIsLoading(false)
+          return
+        }
       }
-      
-      localStorage.setItem(`ayush_profile_${user.id}`, JSON.stringify(profileData))
-      
-      // Also update the auth user if updateUser is available
-      if (updateUser) {
-        updateUser({
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: profile.name,
-          bio: profile.bio,
-          avatar: avatar || undefined,
           username: profile.username,
-        })
-      }
-      
-      // Update the demo auth storage
-      const authData = localStorage.getItem("ayush_demo_auth")
-      if (authData) {
-        const parsedAuth = JSON.parse(authData)
-        localStorage.setItem("ayush_demo_auth", JSON.stringify({
-          ...parsedAuth,
-          name: profile.name,
           bio: profile.bio,
           avatar: avatar,
-          username: profile.username,
-        }))
-      }
+          websiteUrl: profile.websiteUrl || "",
+        }),
+      })
 
+      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 409) throw new Error("Username is already taken")
+        throw new Error(data.error || "Failed to save")
+      }
+      mutate()
       toast({ title: "Success", description: "Profile saved successfully!" })
-    } catch {
-      toast({ title: "Error", description: "Failed to save profile", variant: "destructive" })
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to save profile",
+        variant: "destructive",
+      })
     }
-    
+
     setIsLoading(false)
   }
 

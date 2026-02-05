@@ -20,21 +20,10 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase();
 
     if (!db) {
-      // Demo mode
-      const response = NextResponse.json({
-        success: true,
-        message: "Login successful (Demo Mode)",
-        user: { name: "Demo User", email, role: "admin", plan: "free" },
-      });
-
-      response.cookies.set("token", "demo-token", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24, // 1 day
-        path: "/",
-      });
-
-      return response;
+      return NextResponse.json(
+        { error: "Database not connected. Please ensure MongoDB is running." },
+        { status: 503 }
+      );
     }
 
     const usersCollection = db.collection("users");
