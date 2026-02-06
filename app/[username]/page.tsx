@@ -29,6 +29,7 @@ interface ProfileFile {
   id: string
   name: string
   type: string
+  content?: string
   views?: number
 }
 
@@ -502,16 +503,31 @@ export default function PublicProfilePage() {
                   <CarouselItem key={f.id} className="pl-2 basis-[85%] sm:basis-[70%]">
                     <Link
                       href={`/share/${profile.username}/${f.id}`}
-                      className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-6 transition-all hover:scale-[1.02]"
+                      className="group flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 transition-all hover:scale-[1.02]"
                       style={{
                         background: isGradient ? "rgba(255,255,255,0.08)" : `${textColor}10`,
                         borderColor: accentColor + "50",
                         color: textColor,
                       }}
                     >
-                      <ImageIcon className="h-12 w-12" style={{ color: accentColor }} />
-                      <span className="text-sm font-medium truncate max-w-full">{f.name}</span>
-                      {f.views !== undefined && <span className="text-xs opacity-60">{f.views} views</span>}
+                      <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                        {f.content ? (
+                          <Image 
+                            src={f.content} 
+                            alt={f.name} 
+                            fill 
+                            className="object-cover transition-transform group-hover:scale-110" 
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-zinc-800">
+                            <ImageIcon className="h-12 w-12" style={{ color: accentColor }} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-1 flex w-full items-center justify-between px-1">
+                        <span className="text-sm font-medium truncate max-w-[70%]">{f.name}</span>
+                        {f.views !== undefined && <span className="text-xs opacity-60">{f.views} views</span>}
+                      </div>
                     </Link>
                   </CarouselItem>
                 ))}

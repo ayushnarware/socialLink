@@ -42,7 +42,6 @@ export async function GET(
       .collection("files")
       .find({ userId: user._id!.toString() })
       .sort({ createdAt: -1 })
-      .project({ content: 0 })
       .limit(50)
       .toArray()
 
@@ -87,10 +86,11 @@ export async function GET(
           cryptoType: link.cryptoType,
         })),
         socials: user.socials || [],
-        files: files.map((f: { _id: { toString: () => string }; name: string; type: string; size?: number; views?: number }) => ({
+        files: files.map((f: { _id: { toString: () => string }; name: string; type: string; content?: string; size?: number; views?: number }) => ({
           id: f._id.toString(),
           name: f.name,
           type: f.type,
+          content: f.type === "image" ? f.content : undefined,
           size: f.size,
           views: f.views || 0,
         })),

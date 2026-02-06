@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
@@ -27,6 +27,13 @@ export default function SignupPage() {
     { label: "Contains uppercase letter", met: /[A-Z]/.test(password) },
   ]
 
+  useEffect(() => {
+    const abortController = new AbortController()
+    return () => {
+      abortController.abort()
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -37,11 +44,14 @@ export default function SignupPage() {
     }
 
     setIsLoading(true)
+    const abortController = new AbortController()
 
     try {
-      await signup(email, password, name)
+      await signup(email, password, name, abortController.signal)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed")
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setError(err.message || "Signup failed")
+      }
     } finally {
       setIsLoading(false)
     }

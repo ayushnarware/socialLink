@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,22 +20,26 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated && pathname !== "/dashboard") {
       router.push("/dashboard")
     }
-  }, [isLoading, isAuthenticated, router])
+  }, [isLoading, isAuthenticated, router, pathname])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsSubmitting(true)
+    const abortController = new AbortController()
 
     try {
-      await login(email, password)
+      await login(email, password, abortController.signal)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed")
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setError(err.message || "Login failed")
+      }
     } finally {
       setIsSubmitting(false)
     }

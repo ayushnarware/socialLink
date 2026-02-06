@@ -74,10 +74,11 @@ export default function SettingsPage() {
   const handleSave = async () => {
     if (!user) return
     setIsLoading(true)
+    const abortController = new AbortController()
 
     try {
       if (profile.username !== (user.username || username)) {
-        const checkRes = await fetch(`/api/profile/check-username?username=${encodeURIComponent(profile.username)}`)
+        const checkRes = await fetch(`/api/profile/check-username?username=${encodeURIComponent(profile.username)}`, { signal: abortController.signal })
         const checkData = await checkRes.json()
         if (!checkData.available) {
           toast({ title: "Username unavailable", description: "This username is already taken", variant: "destructive" })
@@ -95,6 +96,7 @@ export default function SettingsPage() {
           avatar: avatar,
           websiteUrl: profile.websiteUrl || "",
         }),
+        signal: abortController.signal,
       })
 
       const data = await res.json()
@@ -102,14 +104,16 @@ export default function SettingsPage() {
         if (res.status === 409) throw new Error("Username is already taken")
         throw new Error(data.error || "Failed to save")
       }
-      mutate()
+      mutate(abortController.signal)
       toast({ title: "Success", description: "Profile saved successfully!" })
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to save profile",
-        variant: "destructive",
-      })
+      if (err instanceof Error && err.name !== 'AbortError') {
+        toast({
+          title: "Error",
+          description: err.message || "Failed to save profile",
+          variant: "destructive",
+        })
+      }
     }
 
     setIsLoading(false)

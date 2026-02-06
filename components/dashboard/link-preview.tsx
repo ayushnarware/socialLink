@@ -25,6 +25,7 @@ interface PreviewFile {
   id: string
   name: string
   type: string
+  content?: string
   views?: number
 }
 
@@ -82,7 +83,15 @@ export function LinkPreview() {
           avatar: user.avatar || null,
         })
         if (user.socials && Array.isArray(user.socials)) setSocials(user.socials)
-        if (filesData.files) setFiles(filesData.files.map((f: { id: string; name: string; type: string; views?: number }) => ({ id: f.id, name: f.name, type: f.type, views: f.views })))
+        if (filesData.files) {
+          setFiles(filesData.files.map((f: { id: string; name: string; type: string; content?: string; views?: number }) => ({ 
+            id: f.id, 
+            name: f.name, 
+            type: f.type, 
+            content: f.content,
+            views: f.views 
+          })))
+        }
         if (formsData.forms) setForms(formsData.forms.map((f: { id: string; title: string }) => ({ id: f.id, title: f.title })))
       } catch {}
     }
@@ -209,15 +218,23 @@ export function LinkPreview() {
 
             {/* Photos - like public profile */}
             {files.filter((f) => f.type === "image").length > 0 && (
-              <div className="mt-4 w-full">
+              <div className="mt-6 w-full">
                 <p className="mb-2 text-xs opacity-70">Photos</p>
                 <Carousel opts={{ align: "start", loop: false, dragFree: true }}>
                   <CarouselContent className="-ml-2">
                     {files.filter((f) => f.type === "image").slice(0, 3).map((f) => (
                       <CarouselItem key={f.id} className="pl-2 basis-[70%]">
-                        <div className={`flex flex-col items-center justify-center gap-1 rounded-xl border-2 p-3 ${buttonRadius}`} style={{ background: isGradient ? "rgba(255,255,255,0.08)" : textColor + "10", borderColor: accentColor + "50", color: textColor }}>
-                          <ImageIcon className="h-8 w-8" style={{ color: accentColor }} />
-                          <span className="text-xs font-medium truncate max-w-full">{f.name}</span>
+                        <div className={`flex flex-col gap-1 rounded-xl border-2 p-2 ${buttonRadius}`} style={{ background: isGradient ? "rgba(255,255,255,0.08)" : textColor + "10", borderColor: accentColor + "50", color: textColor }}>
+                          <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black/20">
+                            {f.content ? (
+                              <Image src={f.content} alt={f.name} fill className="object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                <ImageIcon className="h-6 w-6 opacity-50" />
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-medium truncate px-1">{f.name}</span>
                         </div>
                       </CarouselItem>
                     ))}

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useEffect } from "react"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { DashboardHeader } from "@/components/dashboard/header"
@@ -17,13 +17,14 @@ export function useSidebarContext() {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isAuthenticated } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated && pathname !== "/login") {
       router.push("/login")
     }
-  }, [isLoading, isAuthenticated, router])
+  }, [isLoading, isAuthenticated, router, pathname])
 
   if (isLoading) {
     return (

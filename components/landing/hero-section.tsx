@@ -50,20 +50,20 @@ export function HeroSection() {
           </Button>
         </div>
         
-        <div className="mt-16 flex flex-wrap items-center justify-center gap-8 text-muted-foreground">
-          <div className="text-center">
-            <p className="text-3xl font-bold text-foreground">2M+</p>
-            <p className="text-sm">Active Users</p>
+        <div className="mt-16 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-muted-foreground">
+          <div className="text-center min-w-[100px]">
+            <p className="text-2xl sm:text-3xl font-bold text-foreground">2M+</p>
+            <p className="text-xs sm:text-sm">Active Users</p>
           </div>
-          <div className="h-8 w-px bg-border" />
-          <div className="text-center">
-            <p className="text-3xl font-bold text-foreground">50M+</p>
-            <p className="text-sm">Links Created</p>
+          <div className="hidden sm:block h-8 w-px bg-border" />
+          <div className="text-center min-w-[100px]">
+            <p className="text-2xl sm:text-3xl font-bold text-foreground">50M+</p>
+            <p className="text-xs sm:text-sm">Links Created</p>
           </div>
-          <div className="h-8 w-px bg-border" />
-          <div className="text-center">
-            <p className="text-3xl font-bold text-foreground">99.9%</p>
-            <p className="text-sm">Uptime</p>
+          <div className="hidden sm:block h-8 w-px bg-border" />
+          <div className="text-center min-w-[100px]">
+            <p className="text-2xl sm:text-3xl font-bold text-foreground">99.9%</p>
+            <p className="text-xs sm:text-sm">Uptime</p>
           </div>
         </div>
       </div>
