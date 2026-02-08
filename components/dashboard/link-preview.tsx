@@ -263,7 +263,7 @@ export function LinkPreview() {
             )}
 
             <div className="mt-auto pt-8">
-              <p className="text-xs opacity-40">Powered by Ayush</p>
+              <p className="text-xs opacity-40">Powered by MyProfile.live</p>
             </div>
           </div>
         </div>

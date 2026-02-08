@@ -145,7 +145,7 @@ export function SocialMediaLinksSection() {
                   <Label htmlFor='social-url'>Profile URL</Label>
                   <Input
                     id='social-url'
-                    placeholder='https://instagram.com/yourprofile'
+                    placeholder='https://platform/yourprofile'
                     value={url}
                     onChange={e => setUrl(e.target.value)}
                     className='mt-1'

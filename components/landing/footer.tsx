@@ -58,9 +58,9 @@ export function Footer() {
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-                <span className="font-bold text-accent-foreground">A</span>
+                <span className="font-bold text-accent-foreground">MP</span>
               </div>
-              <span className="text-xl font-bold text-foreground">Ayush</span>
+              <span className="text-xl font-bold text-foreground">MyProfile.live</span>
             </Link>
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
               The complete link-in-bio platform for creators and businesses. 
@@ -108,7 +108,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border/50 pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            {new Date().getFullYear()} Ayush. All rights reserved.
+            {new Date().getFullYear()} MyProfile.live. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <Link

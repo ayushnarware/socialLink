@@ -155,7 +155,7 @@ export default function PublicProfilePage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: p.username || username, type: "pageView" }),
-        }).catch(() => {})
+        }).catch(() => { })
       })
       .catch((error) => {
         console.error("Error loading profile:", error)
@@ -173,7 +173,7 @@ export default function PublicProfilePage() {
   }
 
   const handleLinkClick = (link: UserLink) => {
-    fetch("/api/links/click", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ linkId: link.id }) }).catch(() => {})
+    fetch("/api/links/click", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ linkId: link.id }) }).catch(() => { })
     setLinks((prev) =>
       prev.map((l) => (l.id === link.id ? { ...l, clicks: (l.clicks || 0) + 1 } : l))
     )
@@ -199,7 +199,7 @@ export default function PublicProfilePage() {
         const m = url.match(/vimeo\.com\/(\d+)/)
         return m ? `https://player.vimeo.com/video/${m[1]}` : url
       }
-    } catch {}
+    } catch { }
     return url
   }
 
@@ -208,7 +208,7 @@ export default function PublicProfilePage() {
     try {
       const m = url.match(/spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)/)
       if (m) return `https://open.spotify.com/embed/${m[1]}/${m[2]}`
-    } catch {}
+    } catch { }
     return url
   }
 
@@ -231,7 +231,7 @@ export default function PublicProfilePage() {
           <p className="mt-3 max-w-md text-zinc-400">
             The profile <span className="font-mono text-emerald-400">@{username}</span> doesn't exist or hasn't been set up yet.
           </p>
-          <Link 
+          <Link
             href="/"
             className="mt-8 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 font-medium text-white transition-colors hover:bg-emerald-600"
           >
@@ -472,62 +472,118 @@ export default function PublicProfilePage() {
             )}
           </TabsContent>
 
-          <TabsContent value="files" className="mt-6">
-            <Carousel opts={{ align: "start", loop: true, dragFree: true }}>
-              <CarouselContent className="-ml-2">
-                {filesList.map((f) => (
-                  <CarouselItem key={f.id} className="pl-2 basis-[85%] sm:basis-[70%]">
-                    <Link
-                      href={`/share/${profile.username}/${f.id}`}
-                      className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-6 transition-all hover:scale-[1.02]"
-                      style={{
-                        background: isGradient ? "rgba(255,255,255,0.08)" : `${textColor}10`,
-                        borderColor: accentColor + "50",
-                        color: textColor,
-                      }}
-                    >
-                      <FileText className="h-12 w-12" style={{ color: accentColor }} />
-                      <span className="text-sm font-medium truncate max-w-full">{f.name}</span>
-                      {f.views !== undefined && <span className="text-xs opacity-60">{f.views} views</span>}
-                    </Link>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
+          <TabsContent value="files" className="mt-6 space-y-3">
+            {filesList.map((f) => {
+              const isImage = /\.(jpg|jpeg|png|webp)$/i.test(f.content || "");
+              const isPDF = /\.pdf$/i.test(f.content || "");
+
+              return (
+                <Link
+                  key={f.id}
+                  href={`/share/${profile.username}/${f.id}`}
+                  className="flex w-full items-center gap-4 rounded-xl border p-3 transition hover:bg-black/10"
+                  style={{
+                    borderColor: accentColor + "40",
+                    color: textColor,
+                  }}
+                >
+                  {/* PREVIEW */}
+                  <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-900">
+                    {isImage && (
+                      <Image
+                        src={f.content}
+                        alt={f.name}
+                        fill
+                        className="object-cover"
+                      />
+                    )}
+
+                    {isPDF && (
+                      <iframe
+                        src={`${f.content}#page=1&zoom=50`}
+                        className="h-full w-full"
+                      />
+                    )}
+
+                    {!isImage && !isPDF && (
+                      <div className="flex h-full w-full flex-col items-center justify-center">
+                        <FileText
+                          className="h-8 w-8"
+                          style={{ color: accentColor }}
+                        />
+                        <span className="mt-1 text-xs opacity-60">
+                          {f.name.split(".").pop()?.toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* FILE INFO */}
+                  <div className="flex flex-1 flex-col gap-1 overflow-hidden">
+                    <span className="truncate font-medium">
+                      {f.name}
+                    </span>
+
+                    {/* {f.views !== undefined && (
+            <span className="text-xs opacity-60">
+              {f.views} views
+            </span>
+          )} */}
+                  </div>
+                </Link>
+              );
+            })}
           </TabsContent>
+
 
           <TabsContent value="photos" className="mt-6">
             <Carousel opts={{ align: "start", loop: true, dragFree: true }}>
               <CarouselContent className="-ml-2">
                 {photosList.map((f) => (
-                  <CarouselItem key={f.id} className="pl-2 basis-[85%] sm:basis-[70%]">
+                  <CarouselItem
+                    key={f.id}
+                    className="pl-2 basis-[75%] sm:basis-[45%] md:basis-[30%]"
+                  >
                     <Link
                       href={`/share/${profile.username}/${f.id}`}
-                      className="group flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 transition-all hover:scale-[1.02]"
+                      className="flex flex-col gap-2 rounded-xl border p-2"
                       style={{
-                        background: isGradient ? "rgba(255,255,255,0.08)" : `${textColor}10`,
-                        borderColor: accentColor + "50",
+                        background: isGradient
+                          ? "rgba(255,255,255,0.06)"
+                          : `${textColor}08`,
+                        borderColor: accentColor + "40",
                         color: textColor,
                       }}
                     >
-                      <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                      {/* Instagram style image */}
+                      <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-black">
                         {f.content ? (
-                          <Image 
-                            src={f.content} 
-                            alt={f.name} 
-                            fill 
-                            className="object-cover transition-transform group-hover:scale-110" 
+                          <Image
+                            src={f.content}
+                            alt={f.name}
+                            fill
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                            className="object-cover"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-zinc-800">
-                            <ImageIcon className="h-12 w-12" style={{ color: accentColor }} />
+                          <div className="flex h-full w-full items-center justify-center bg-zinc-900">
+                            <ImageIcon className="h-10 w-10" style={{ color: accentColor }} />
                           </div>
                         )}
                       </div>
-                      <div className="mt-1 flex w-full items-center justify-between px-1">
-                        <span className="text-sm font-medium truncate max-w-[70%]">{f.name}</span>
-                        {f.views !== undefined && <span className="text-xs opacity-60">{f.views} views</span>}
-                      </div>
+
+                      {/* Photo views */}
+                      {/* Caption / stats */}
+                      {/* <div className="flex items-center justify-between px-1">
+                        <span className="text-sm font-medium truncate max-w-[70%]">
+                          {f.name}
+                        </span>
+                        {f.views !== undefined && (
+                          <span className="text-xs opacity-60">
+                            {f.views} views
+                          </span>
+                        )}
+                      </div> */}
                     </Link>
                   </CarouselItem>
                 ))}
@@ -535,39 +591,54 @@ export default function PublicProfilePage() {
             </Carousel>
           </TabsContent>
 
-          <TabsContent value="forms" className="mt-6">
-            <Carousel opts={{ align: "start", loop: true, dragFree: true }}>
-              <CarouselContent className="-ml-2">
-                {forms.map((f) => (
-                  <CarouselItem key={f.id} className="pl-2 basis-[85%] sm:basis-[70%]">
-                    <Link
-                      href={`/form/${profile.username}/${f.id}`}
-                      className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-6 transition-all hover:scale-[1.02]"
-                      style={{
-                        background: isGradient ? "rgba(255,255,255,0.08)" : `${textColor}10`,
-                        borderColor: accentColor + "50",
-                        color: textColor,
-                      }}
-                    >
-                      <FileText className="h-12 w-12" style={{ color: accentColor }} />
-                      <span className="text-sm font-medium truncate max-w-full">{f.title}</span>
-                    </Link>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
+
+          <TabsContent value="forms" className="mt-6 space-y-3">
+            {forms.map((f) => (
+              <Link
+                key={f.id}
+                href={`/form/${profile.username}/${f.id}`}
+                className="flex w-full items-center gap-4 rounded-xl border p-3 transition hover:bg-black/10"
+                style={{
+                  borderColor: accentColor + "40",
+                  color: textColor,
+                }}
+              >
+                {/* ICON */}
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-zinc-900">
+                  <FileText
+                    className="h-6 w-6"
+                    style={{ color: accentColor }}
+                  />
+                </div>
+
+                {/* INFO */}
+                <div className="flex flex-1 flex-col gap-1 overflow-hidden">
+                  <span className="truncate font-medium">
+                    {f.title}
+                  </span>
+
+                  <span className="text-xs opacity-60">
+                    Form
+                    {/* agar chaho to ye add kar sakta hai */}
+                    {/* • {f.questions?.length ?? 0} questions */}
+                  </span>
+                </div>
+              </Link>
+            ))}
           </TabsContent>
+
+
         </Tabs>
 
         {/* Footer */}
         {profile.plan === "free" && (
           <div className="mt-16 text-center">
-            <Link 
+            <Link
               href="/"
-              className="text-sm opacity-40 transition-opacity hover:opacity-60" 
+              className="text-sm opacity-40 transition-opacity hover:opacity-60"
               style={{ color: textColor }}
             >
-              Powered by Ayush
+              Powered by MyProfile.live
             </Link>
           </div>
         )}

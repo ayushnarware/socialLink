@@ -26,7 +26,7 @@ export async function generateMetadata({
   }
   const profile = data.profile
   const seo = (profile.seo || {}) as { title?: string; description?: string; keywords?: string; ogImage?: string; canonicalUrl?: string }
-  const title = seo.title || `${profile.name} | Link-in-Bio`
+  const title = seo.title || `MyProfile.live/@${profile.name}`
   const description = seo.description || profile.bio || `View ${profile.name}'s links and profile`
   const keywords = seo.keywords || "link in bio, profile, links"
   const images = seo.ogImage ? [{ url: seo.ogImage, width: 1200, height: 630 }] : undefined

@@ -18,7 +18,7 @@ export async function GET() {
     const db = await getDatabase()
     if (!db) {
       return NextResponse.json(
-        { error: "Database not connected. Please ensure MongoDB is running." },
+        { error: "Internal Database Server Error. Please try again later." },
         { status: 503 }
       )
     }

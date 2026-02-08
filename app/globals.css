@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Ayush - Dark-first SaaS Theme */
+/* myprofile.live - Dark-first SaaS Theme */
 :root {
   /* Dark theme as default */
   --background: oklch(0.09 0 0);

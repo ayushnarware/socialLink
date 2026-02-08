@@ -109,7 +109,7 @@ export default function SharedFilePage() {
       <div className="mx-auto max-w-2xl">
         <Link href="/" className="mb-6 inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Ayush
+          Back to MyProfile.live
         </Link>
 
         <Card>
@@ -172,7 +172,7 @@ export default function SharedFilePage() {
             <div className="flex h-5 w-5 items-center justify-center rounded bg-accent/30 text-xs font-bold text-accent">
               A
             </div>
-            <span>Powered by Ayush</span>
+            <span>Powered by MyProfile.live</span>
           </Link>
         </div>
       </div>

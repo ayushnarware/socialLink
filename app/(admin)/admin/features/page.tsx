@@ -90,7 +90,7 @@ const initialFeatures: FeatureToggle[] = [
 const configOptions = [
   { id: "max-free-links", label: "Max Links (Free)", value: "5" },
   { id: "max-pro-links", label: "Max Links (Pro)", value: "unlimited" },
-  { id: "watermark-text", label: "Free Tier Watermark", value: "Powered by Ayush" },
+  { id: "watermark-text", label: "Free Tier Watermark", value: "Powered by MyProfile.live" },
   { id: "trial-days", label: "Pro Trial Days", value: "14" },
 ]
 

@@ -187,7 +187,7 @@ export default function SettingsPage() {
               <Label htmlFor="username">Username</Label>
               <div className="flex">
                 <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
-                  ayush.link/
+                myprofile.live/
                 </span>
                 <Input
                   id="username"

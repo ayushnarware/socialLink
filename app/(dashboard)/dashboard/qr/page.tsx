@@ -62,7 +62,7 @@ export default function QRCodesPage() {
   const [copied, setCopied] = useState(false)
   
   const username = user?.username || user?.name?.toLowerCase().replace(/\s+/g, "") || "user"
-  const profileUrl = `https://ayush.link/${username}`
+  const profileUrl = `https://myprofile.live/${username}`
 
   useEffect(() => {
     const saved = localStorage.getItem(`ayush_qrcodes_${username}`)

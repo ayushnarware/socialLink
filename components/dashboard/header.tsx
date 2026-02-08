@@ -34,7 +34,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
         </button>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <span className="text-sm text-muted-foreground">ayush.link/</span>
+          <span className="text-sm text-muted-foreground">MyProfile.live/</span>
           <span className="font-medium text-foreground">
             {user.username || user.name.toLowerCase().replace(/\s+/g, "")}
           </span>

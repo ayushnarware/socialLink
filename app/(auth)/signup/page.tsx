@@ -64,9 +64,9 @@ export default function SignupPage() {
         <div className="flex flex-col items-center">
           <Link href="/" className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent">
-              <span className="text-lg font-bold text-accent-foreground">A</span>
+              <span className="text-lg font-bold text-accent-foreground">MP</span>
             </div>
-            <span className="text-2xl font-bold text-foreground">Ayush</span>
+            <span className="text-2xl font-bold text-foreground">MyProfile.live</span>
           </Link>
           <h1 className="mt-6 text-2xl font-bold text-foreground">
             Create your account

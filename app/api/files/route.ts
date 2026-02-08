@@ -9,7 +9,7 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const db = await getDatabase()
-    if (!db) return NextResponse.json({ error: "Database not connected" }, { status: 503 })
+    if (!db) return NextResponse.json({ error: "Internal Database Server Error. Please try again later."  }, { status: 503 })
 
     const userId = (user as { _id: ObjectId })._id.toString()
     const files = await db.collection("files").find({ userId }).sort({ createdAt: -1 }).toArray()
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const db = await getDatabase()
-    if (!db) return NextResponse.json({ error: "Database not connected" }, { status: 503 })
+    if (!db) return NextResponse.json({ error: "Internal Database Server Error. Please try again later."  }, { status: 503 })
 
     const { name, type, content, mimeType, size } = await request.json()
     if (!name || !type || content === undefined) {

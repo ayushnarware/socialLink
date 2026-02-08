@@ -15,14 +15,14 @@ const plans = [
       "Basic analytics",
       "Standard themes",
       "QR code generator",
-      "Ayush branding",
+      "MyProfile.live branding",
     ],
     cta: "Get Started",
     popular: false,
   },
   {
     name: "Pro",
-    price: "$9",
+    price: "$2",
     period: "per month",
     description: "For creators who want more",
     features: [
@@ -30,17 +30,17 @@ const plans = [
       "Advanced analytics",
       "20+ premium themes",
       "Custom colors & fonts",
-      "Remove Ayush branding",
+      "Remove MyProfile.live branding",
       "Priority support",
       "SEO optimization",
       "Animated backgrounds",
     ],
     cta: "Start Free Trial",
-    popular: true,
+    popular: false,
   },
   {
     name: "Business",
-    price: "$29",
+    price: "$5",
     period: "per month",
     description: "For teams and businesses",
     features: [
@@ -54,7 +54,7 @@ const plans = [
       "Custom integrations",
     ],
     cta: "Contact Sales",
-    popular: false,
+    popular: true,
   },
 ]
 

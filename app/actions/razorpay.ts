@@ -44,7 +44,7 @@ export async function createRazorpayOrder(productId: string) {
     amount: product.priceInINR * 100,
     currency: "INR",
     keyId: process.env.RAZORPAY_KEY_ID,
-    name: "Ayush",
+    name: "MyProfile.live",
     description: product.description,
     prefill: {
       name: user.name,

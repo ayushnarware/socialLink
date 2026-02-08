@@ -185,7 +185,7 @@ export default function SEOPage() {
                   <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
                     {seoData.description || "Your page description will appear here"}
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">ayush.link</p>
+                  <p className="mt-2 text-xs text-muted-foreground">myprofile.live</p>
                 </div>
               </div>
             </div>
@@ -202,7 +202,7 @@ export default function SEOPage() {
               <Label htmlFor="canonical">Canonical URL</Label>
               <Input
                 id="canonical"
-                placeholder="https://ayush.link/your-username"
+                placeholder="https://myprofile.live/your-username"
                 value={seoData.canonicalUrl}
                 onChange={(e) =>
                   setSeoData((prev) => ({ ...prev, canonicalUrl: e.target.value }))

@@ -68,9 +68,9 @@ export function DashboardSidebar({
         <div className="flex h-16 items-center justify-between border-b border-border px-6">
           <Link href="/" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-              <span className="font-bold text-accent-foreground">A</span>
+              <span className="font-bold text-accent-foreground">MP</span>
             </div>
-            <span className="text-xl font-bold text-foreground">Ayush</span>
+            <span className="text-xl font-bold text-foreground">MyProfile.live</span>
           </Link>
           <button
             type="button"

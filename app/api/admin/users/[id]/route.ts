@@ -24,7 +24,7 @@ export async function PATCH(
     const db = await getDatabase()
     if (!db) {
       return NextResponse.json(
-        { error: "Database not connected. Please ensure MongoDB is running." },
+        { error: "Database not connected." },
         { status: 503 }
       )
     }
@@ -73,7 +73,7 @@ export async function DELETE(
     const db = await getDatabase()
     if (!db) {
       return NextResponse.json(
-        { error: "Database not connected. Please ensure MongoDB is running." },
+        { error: "Internal Database Server Error. Please try again later."  },
         { status: 503 }
       )
     }

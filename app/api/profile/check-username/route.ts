@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
     if (!db) {
-      return NextResponse.json({ available: false, error: "Database not connected" })
+      return NextResponse.json({ available: false, error: "Internal Database Server Error. Please try again later."  })
     }
 
     const user = await getCurrentUser()

@@ -157,7 +157,7 @@ export default function BillingPage() {
             <div className="relative overflow-hidden rounded-xl border-2 border-border p-6 transition-all">
               <h3 className="text-xl font-semibold text-foreground">Free</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Get started with Ayush
+                Get started with MyProfile.live
               </p>
 
               <div className="mt-4 flex items-baseline gap-1">

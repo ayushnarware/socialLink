@@ -1,7 +1,7 @@
-# OAuth Setup Guide for Ayush
+# OAuth Setup Guide for myprofile
 
 ## Overview
-This guide helps you set up Google and Facebook OAuth authentication for the Ayush Link-in-Bio platform.
+This guide helps you set up Google and Facebook OAuth authentication for the myprofile Link-in-Bio platform.
 
 ## Google OAuth Setup
 

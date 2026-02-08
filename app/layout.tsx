@@ -10,10 +10,10 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Ayush - Link-in-Bio Platform for Creators & Businesses',
+  title: 'myprofile.live - Link-in-Bio Platform for Creators & Businesses',
   description: 'Create stunning link-in-bio pages, track analytics, and grow your audience. The complete platform for managing your online presence.',
   keywords: ['link in bio', 'link management', 'social media', 'analytics', 'creator tools'],
-  generator: 'Ayush',
+  generator: 'myprofile.live',
   icons: {
     icon: [
       {

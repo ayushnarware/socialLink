@@ -67,7 +67,7 @@ export default function DomainsPage() {
           <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 p-4">
             <div className="flex-1">
               <p className="font-mono text-lg font-medium text-foreground">
-                ayush.link/{username}
+                myprofile.live/{username}
               </p>
               <p className="text-sm text-muted-foreground">Your default profile URL</p>
             </div>
@@ -99,7 +99,7 @@ export default function DomainsPage() {
         <CardHeader>
           <CardTitle>Add Custom Domain</CardTitle>
           <CardDescription>
-            Use your own domain instead of ayush.link
+            Use your own domain instead of myprofile.live
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -146,7 +146,7 @@ export default function DomainsPage() {
                     <td className="px-4 py-2 font-mono text-foreground">CNAME</td>
                     <td className="px-4 py-2 font-mono text-foreground">links</td>
                     <td className="px-4 py-2 font-mono text-foreground">
-                      cname.ayush.link
+                      cname.myprofile.live
                     </td>
                   </tr>
                 </tbody>
@@ -170,7 +170,7 @@ export default function DomainsPage() {
                 <Globe className="h-5 w-5 text-accent" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-foreground">ayush.link/{username}</p>
+                <p className="font-medium text-foreground">myprofile.live/{username}</p>
                 <p className="text-sm text-muted-foreground">Default domain (always active)</p>
               </div>
               <div className="flex items-center gap-2 text-accent">
